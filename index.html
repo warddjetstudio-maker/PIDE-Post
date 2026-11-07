@@ -11,6 +11,430 @@ body{margin:0;background:var(--bg);color:var(--tx);font:14px/1.4 system-ui,sans-
 button,input,textarea,select{font:inherit;color:inherit}
 a{color:inherit;text-decoration:none}
 .logo{font-weight:900;font-size:22px;letter-spacing:-.5px;background:linear-gradient(90deg,var(--c1),var(--c2));-webkit-background-clip:text;color:transparent;cursor:pointer;white-space:nowrap}
+.top{position:sticky;top:0;z-index:9;height:56px;display:flex;align-items:center;gap:14px;padding:0 16px;background:color-mix(in srgb,var(--bg) 94%,transparent);backdrop-filter:blur(10px)}
+.search{flex:1;max-width:520px;margin:0 auto}
+.search input{width:100%;margin:0;border-radius:22px;background:var(--sf);border:1px solid var(--sf2);padding:9px 16px}
+.btn{background:var(--sf2);border:0;border-radius:20px;padding:8px 16px;cursor:pointer;font-weight:600}
+.btn:hover{filter:brightness(1.25)}
+.pri{background:linear-gradient(90deg,var(--c1),var(--c2));color:#000;border:0;border-radius:20px;padding:9px 18px;font-weight:700;cursor:pointer}
+.fol{background:linear-gradient(90deg,var(--c2),#ff7a3d);color:#fff;font-weight:700;padding:10px 22px;border-radius:22px;border:0;cursor:pointer;font-size:15px;box-shadow:0 0 14px #ff2bd655}
+.fol.on{background:var(--sf2);box-shadow:none;color:var(--tx)}
+.lay{display:flex}
+.side{width:210px;flex-shrink:0;position:sticky;top:56px;height:calc(100vh - 56px);overflow:auto;padding:8px}
+.ni{display:flex;gap:12px;align-items:center;padding:10px 12px;border-radius:10px;cursor:pointer}
+.ni:hover,.ni.on{background:var(--sf2)}
+.side h4{margin:14px 12px 4px;color:var(--mu);font-size:12px;text-transform:uppercase}
+.ct{flex:1;min-width:0;padding:12px 22px 40px}
+@media(max-width:860px){.lay{display:block}.side{position:static;width:auto;height:auto;display:flex;overflow-x:auto;padding:4px 10px}.side h4,.side .fl{display:none}.ni{white-space:nowrap}.ct{padding:10px 12px}}
+.chips{display:flex;gap:8px;overflow-x:auto;padding-bottom:14px}
+.chip{background:var(--sf2);border:0;border-radius:9px;padding:6px 14px;cursor:pointer;white-space:nowrap}
+.chip.on{background:var(--tx);color:var(--bg);font-weight:700}
+.gr{display:grid;grid-template-columns:repeat(auto-fill,minmax(270px,1fr));gap:24px 16px}
+.vc{cursor:pointer}
+.th{position:relative;aspect-ratio:16/9;border-radius:var(--r);overflow:hidden;background:var(--sf)}
+.th img{width:100%;height:100%;object-fit:cover;transition:transform .3s}
+.vc:hover .th img{transform:scale(1.05)}
+.tc{display:flex;align-items:center;justify-content:center;height:100%;padding:16px;text-align:center;font-weight:800;font-size:18px;overflow:hidden}
+.bd{position:absolute;right:8px;bottom:8px;background:#000b;border-radius:6px;padding:2px 8px;font-size:12px}
+.bd.l{right:auto;left:8px}
+.spb{position:absolute;left:8px;top:8px;background:#ffcc00;color:#000;font-weight:700;font-size:11px;padding:2px 8px;border-radius:6px;z-index:2}
+.row{display:flex;gap:12px;margin-top:10px}
+.ti{font-weight:700;font-size:15px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.sub{color:var(--mu);font-size:13px}
+.av{border-radius:50%;object-fit:cover;display:inline-flex;align-items:center;justify-content:center;font-weight:700;flex-shrink:0;color:#fff}
+.adin{width:100%;height:100%;display:flex;align-items:center;justify-content:center;overflow:hidden}
+.empty{text-align:center;color:var(--mu);padding:60px 0;line-height:2.4}
+.wt{display:grid;grid-template-columns:minmax(0,1fr) 380px;gap:26px}
+@media(max-width:1050px){.wt{grid-template-columns:1fr}}
+.gal{position:relative;background:#000;border-radius:var(--r);overflow:hidden;aspect-ratio:16/9}
+.gal img{width:100%;height:100%;object-fit:contain}
+.ar{position:absolute;top:50%;transform:translateY(-50%);background:#000a;border:0;color:#fff;font-size:26px;width:42px;height:42px;border-radius:50%;cursor:pointer}
+.ar.l{left:10px}.ar.r{right:10px}
+.h1{font-size:22px;margin:14px 0 6px}
+.ab{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin:12px 0}
+.ab .sp{flex:1}
+.pill{display:flex;background:var(--sf2);border-radius:22px;overflow:hidden}
+.pill button{background:none;border:0;padding:9px 16px;cursor:pointer;font-size:15px}
+.pill button.on{color:var(--c2)}
+.desc{background:var(--sf);border-radius:var(--r);padding:14px;white-space:pre-wrap;word-break:break-word}
+.meta{display:flex;gap:8px;flex-wrap:wrap;margin:8px 0}
+.mc{background:var(--sf2);border-radius:14px;padding:3px 12px;font-size:13px}
+.tag{color:var(--c1);cursor:pointer}
+.lc{display:flex;flex-direction:column;gap:2px;background:var(--sf);border:1px solid var(--sf2);border-radius:12px;padding:12px;margin-top:12px}
+.lc span{color:var(--mu);font-size:12px}
+.poll{background:var(--sf);border-radius:var(--r);padding:14px;margin-top:12px}
+.po{position:relative;display:flex;justify-content:space-between;width:100%;margin-top:8px;padding:10px 14px;border:1px solid var(--sf2);border-radius:10px;background:none;cursor:pointer;overflow:hidden;text-align:left}
+.po i{position:absolute;left:0;top:0;bottom:0;background:#00e5ff33}
+.po span,.po em{position:relative;font-style:normal}
+button.po:hover{border-color:var(--c1)}
+.cm{display:flex;gap:12px;margin:16px 0}
+.mr{display:flex;gap:10px;margin-bottom:12px;cursor:pointer}
+.mr .th{width:168px;flex-shrink:0;border-radius:10px}
+.mr .tc{font-size:12px;padding:8px}
+.banner{height:150px;border-radius:var(--r)}
+.ph{display:flex;align-items:flex-end;gap:18px;margin:-40px 20px 20px;flex-wrap:wrap}
+.ph .av{border:4px solid var(--bg)}
+.cam{position:absolute;right:0;bottom:0;background:var(--c1);color:#000;border-radius:50%;width:32px;height:32px;display:flex;align-items:center;justify-content:center;cursor:pointer}
+.modal{position:fixed;inset:0;background:#000c;z-index:20;display:flex;align-items:center;justify-content:center;padding:12px}
+.box{background:var(--sf);border-radius:18px;max-width:600px;width:100%;max-height:94vh;overflow:auto;padding:20px}
+input,textarea,select{width:100%;background:var(--bg);border:1px solid var(--sf2);border-radius:10px;padding:10px;margin:5px 0}
+.mood button{background:var(--sf2);border:2px solid transparent;border-radius:10px;font-size:20px;padding:3px 8px;cursor:pointer}
+.mood button.on{border-color:var(--c1)}
+.err{color:#ff5470;font-size:13px;min-height:18px}
+.auth{max-width:380px;margin:8vh auto;padding:20px;text-align:center}
+.prev img{height:56px;border-radius:8px;margin:4px 4px 0 0}
+body.light{--bg:#f3f3fa;--sf:#fff;--sf2:#e4e4f0;--tx:#15151f;--mu:#62627a}
+.sc{background:var(--sf);border-radius:var(--r);padding:18px;margin-bottom:16px}.sc h3{margin:0 0 10px}
+.sr{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:10px 0;border-top:1px solid var(--sf2)}
+.dg{background:#ff3b5c;color:#fff;border:0;border-radius:20px;padding:8px 16px;cursor:pointer;font-weight:600}
+.dot{display:inline-flex;width:28px;height:28px;border-radius:50%;cursor:pointer;border:3px solid transparent;vertical-align:middle}.dot.on{border-color:var(--tx)}
+.bell{position:relative;cursor:pointer;font-size:20px}.bell b{position:absolute;top:-6px;right:-9px;background:var(--c2);color:#fff;border-radius:9px;font-size:11px;padding:0 5px}
+.toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:var(--tx);color:var(--bg);padding:10px 20px;border-radius:22px;z-index:50;font-weight:600}
+.nt{display:flex;gap:12px;align-items:center;padding:12px;border-radius:12px;cursor:pointer}.nt:hover{background:var(--sf2)}.nt.un{background:var(--sf)}
+</style>
+</head>
+<body>
+<div id="app"></div>
+<script type="module">
+import {initializeApp} from "https://www.gstatic.com/firebasejs/10.14.1/firebase-app.js";
+import {getAuth,onAuthStateChanged,signInWithPopup,GoogleAuthProvider,createUserWithEmailAndPassword,signInWithEmailAndPassword,updateProfile,signOut,sendPasswordResetEmail,deleteUser,reauthenticateWithPopup,reauthenticateWithCredential,EmailAuthProvider} from "https://www.gstatic.com/firebasejs/10.14.1/firebase-auth.js";
+import {getFirestore,collection,doc,getDoc,setDoc,addDoc,updateDoc,deleteDoc,query,orderBy,limit,getDocs,increment,serverTimestamp,where,arrayUnion,arrayRemove} from "https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js";
+
+const app=initializeApp({apiKey:"AIzaSyDtCmvlrwEblK8a5e0L9vwuLZ2XCIstiDo",authDomain:"pide-post.firebaseapp.com",projectId:"pide-post",storageBucket:"pide-post.firebasestorage.app",messagingSenderId:"664464722132",appId:"1:664464722132:web:6a1479bf8d1aea7e8b9341"});
+const auth=getAuth(app),db=getFirestore(app);
+const $=id=>document.getElementById(id);
+const esc=s=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const TAG=/#([\p{L}\p{N}_]{2,30})/gu;
+const CATS=["Tout","Photo","Humour","Musique","Gaming","Voyage","Food","Actu","Autre"];
+const AD="https://pl32250031.profitableratecpmnetwork.com/f9/6c/6f/f96c6f084026a2c041c53df9ec4ac71d.js";
+const S={user:null,me:null,posts:[],users:{},likes:new Set(),votes:{},follows:new Set(),tab:"foryou",cat:"Tout",tag:null,q:"",view:{t:"feed"},gi:0,cm:{},adT:0,adUsed:false,mood:"",notifs:[]};
+const fmt=n=>n>=1e6?(n/1e6).toFixed(1)+" M":n>=1e3?(n/1e3).toFixed(1)+" k":(n||0);
+const ms=p=>p.createdAt?.toMillis?.()||Date.now();
+const ago=t=>{const m=(Date.now()-(t?.toMillis?.()||Date.now()))/6e4;return m<1?"à l'instant":m<60?"il y a "+Math.floor(m)+" min":m<1440?"il y a "+Math.floor(m/60)+" h":"il y a "+Math.floor(m/1440)+" j"};
+const once=k=>{k="pp_"+k;if(sessionStorage[k])return false;sessionStorage[k]=1;return true};
+const hue=s=>{let h=0;for(const c of String(s))h=(h*31+c.charCodeAt(0))%360;return h};
+const nm=(uid,f)=>S.users[uid]?.name||f||"Anonyme";
+const av=(uid,sz=36)=>{const u=S.users[uid]||{},n=u.name||"?";return u.photo?`<img class="av" style="width:${sz}px;height:${sz}px" src="${esc(u.photo)}">`:`<span class="av" style="width:${sz}px;height:${sz}px;font-size:${sz*.45}px;background:hsl(${hue(uid)} 55% 38%)">${esc(n[0]).toUpperCase()}</span>`};
+
+function shrink(file,max,q){return new Promise((ok,ko)=>{
+  if(!file.type.startsWith("image/"))return ko(new Error("Seules les photos sont autorisées (pas de vidéo ni de son)."));
+  const im=new Image,u=URL.createObjectURL(file);
+  im.onload=()=>{const r=Math.min(1,max/Math.max(im.width,im.height)),c=document.createElement("canvas");
+    c.width=im.width*r;c.height=im.height*r;c.getContext("2d").drawImage(im,0,0,c.width,c.height);URL.revokeObjectURL(u);ok(c.toDataURL("image/jpeg",q))};
+  im.onerror=()=>ko(new Error("Image illisible."));im.src=u})}
+
+/* ---------- Erreurs & démarrage ---------- */
+const MSG={"auth/operation-not-allowed":"Cette méthode de connexion n'est pas activée : Firebase → Authentication → Sign-in method.","auth/unauthorized-domain":"Domaine non autorisé : ajoute-le dans Firebase → Authentication → Settings → Domaines autorisés.","auth/invalid-credential":"Email ou mot de passe incorrect.","auth/wrong-password":"Mot de passe incorrect.","auth/user-not-found":"Aucun compte avec cet email.","auth/email-already-in-use":"Cet email est déjà utilisé : clique sur Connexion.","auth/weak-password":"Mot de passe trop court (6 caractères min.).","auth/invalid-email":"Adresse email invalide.","auth/missing-password":"Entre un mot de passe.","auth/popup-closed-by-user":"Fenêtre Google fermée avant la fin.","auth/cancelled-popup-request":"","auth/popup-blocked":"Popup bloquée : autorise-la puis réessaie.","auth/network-request-failed":"Problème de réseau, réessaie.","auth/too-many-requests":"Trop de tentatives, réessaie plus tard.","auth/operation-not-supported-in-this-environment":"Ouvre le site en http(s), pas en file://.","permission-denied":"Firestore refuse l'accès : mets à jour les règles Firestore.","failed-precondition":"Firestore demande un index : clique sur le lien dans la console (F12)."};
+const errMsg=e=>{const c=e?.code||"";return c in MSG?MSG[c]:(e?.message||"Erreur inconnue")+(c?" ["+c+"]":"")};
+const showErr=m=>{S.err=m;const el=$("err");if(el)el.textContent=m};
+async function boot(u){
+  S.user=u;S.me=null;S.boot=null;S.err="";
+  if(u){try{const d=await getDoc(doc(db,"users",u.uid));
+      if(d.exists()){S.me=d.data();await loadSocial();await loadFeed();await loadNotifs()}}
+    catch(e){console.error(e);S.boot=errMsg(e)}}
+  render();const h=location.hash.slice(1);if(S.me&&h&&!S.hash&&S.posts.find(x=>x.id===h)){S.hash=1;A.open(h)}}
+onAuthStateChanged(auth,u=>{if(!S.busy)boot(u)});
+async function loadNotifs(){try{const q=await getDocs(query(collection(db,"notifs"),where("to","==",S.user.uid),limit(60)));S.notifs=q.docs.map(d=>({id:d.id,...d.data()})).sort((a,b)=>ms(b)-ms(a))}catch(e){S.notifs=[]}}
+const notify=(to,type,pid)=>{if(!to||to===S.user.uid)return;addDoc(collection(db,"notifs"),{to,from:S.user.uid,type,pid:pid||"",read:false,createdAt:serverTimestamp()}).catch(()=>{})};
+const toast=m=>{const t=document.createElement("div");t.className="toast";t.textContent=m;document.body.appendChild(t);setTimeout(()=>t.remove(),2200)};
+const applyTheme=()=>{const s=S.me?.settings||{};document.body.classList.toggle("light",s.theme==="light");document.documentElement.style.setProperty("--c1",s.accent||"#00e5ff")};
+const folTxt=uid=>{const u=S.users[uid]||{};return uid!==S.user.uid&&u.settings?.showFollowers===false?"":fmt(u.followers)+" abonnés"};
+const tagRow=()=>{const c={};S.posts.forEach(p=>(p.tags||[]).forEach(t=>c[t]=(c[t]||0)+1));const t=Object.entries(c).sort((a,b)=>b[1]-a[1]).slice(0,8);
+  return t.length?`<div class="chips">${t.map(x=>`<button class="chip" style="color:var(--c1)" onclick="A.filter('${x[0]}')">#${esc(x[0])}</button>`).join("")}</div>`:""};
+async function loadSocial(){
+  const [l,f]=await Promise.all([getDocs(query(collection(db,"likes"),where("uid","==",S.user.uid))),getDocs(query(collection(db,"follows"),where("from","==",S.user.uid)))]);
+  S.likes=new Set();S.votes={};
+  l.docs.forEach(d=>{const x=d.data();x.vote!==undefined?S.votes[x.pid]=x.vote:S.likes.add(x.pid)});
+  S.follows=new Set(f.docs.map(d=>d.data().to))}
+async function loadFeed(){
+  const [s,us]=await Promise.all([getDocs(query(collection(db,"posts"),orderBy("createdAt","desc"),limit(80))),getDocs(query(collection(db,"users"),limit(300)))]);
+  S.posts=s.docs.map(d=>({id:d.id,...d.data()}));
+  S.users={};us.docs.forEach(d=>S.users[d.id]=d.data());S.users[S.user.uid]=S.me}
+
+/* ---------- Algorithme ---------- */
+function score(p){
+  const tw=S.me?.tagWeights||{};
+  const aff=(p.tags||[]).reduce((a,t)=>a+Math.log1p(tw[t]||0),0);
+  const eng=(p.likes||0)+2*(p.comments||0);
+  const rate=(eng+1)/((p.views||0)+10),ctr=((p.clicks||0)+1)/((p.impressions||0)+10);
+  const fresh=Math.exp(-((Date.now()-ms(p))/36e5)/48);
+  return aff*1.2+rate*8+ctr*5+fresh*2+((p.views||0)<20?1.5:0)+(S.follows.has(p.authorId)?2:0)+Math.log1p(eng)*.5}
+const trend=p=>((p.likes||0)*3+(p.comments||0)*5+(p.views||0)*.2)/Math.pow((Date.now()-ms(p))/36e5+2,1.3);
+function visible(){
+  let a=[...S.posts];
+  if(S.cat!=="Tout")a=a.filter(p=>p.cat===S.cat);
+  if(S.tag)a=a.filter(p=>(p.tags||[]).includes(S.tag));
+  if(S.q){const q=S.q.toLowerCase();a=a.filter(p=>((p.title||"")+" "+p.text+" "+nm(p.authorId,p.authorName)+" "+(p.tags||[]).join(" ")).toLowerCase().includes(q))}
+  if(S.tab==="saved")return a.filter(p=>(S.me.saved||[]).includes(p.id));
+  if(S.tab==="recent")return a;
+  if(S.tab==="follow")return a.filter(p=>S.follows.has(p.authorId));
+  return a.sort((x,y)=>S.tab==="trend"?trend(y)-trend(x):score(y)-score(x))}
+const boost=(tags,n)=>{if(!tags?.length||!S.me)return;const u={};S.me.tagWeights=S.me.tagWeights||{};
+  tags.forEach(t=>{u["tagWeights."+t]=increment(n);S.me.tagWeights[t]=(S.me.tagWeights[t]||0)+n});
+  updateDoc(doc(db,"users",S.user.uid),u).catch(()=>{})};
+
+/* ---------- Pubs intégrées (même format qu'un post) ---------- */
+const adSlot=()=>{if(S.adUsed||Date.now()-S.adT<45000)return"";S.adUsed=true;
+  return `<div class="vc"><div class="th"><span class="spb">Sponsorisé</span><div class="adin"></div></div><div class="row"><span class="av" style="width:36px;height:36px;background:var(--sf2)">Ad</span><div><div class="ti">Publicité</div><div class="sub">Sponsorisé</div></div></div></div>`};
+function injectAd(){const el=document.querySelector(".adin");if(!el)return;S.adT=Date.now();const s=document.createElement("script");s.src=AD;el.appendChild(s)}
+
+/* ---------- Écrans ---------- */
+function authHTML(){return `<div class="auth"><div class="logo" style="font-size:42px">PIDE Post</div>
+  <p style="color:var(--mu)">Partage tes photos et tes idées.</p>
+  <button class="pri" style="width:100%;padding:12px" onclick="A.google()">Continuer avec Google</button>
+  <p style="color:var(--mu);margin:14px 0">— ou par email —</p>
+  <input id="nm" placeholder="Pseudo (pour l'inscription)"><input id="em" type="email" placeholder="Email">
+  <input id="pw" type="password" placeholder="Mot de passe (6 caractères min.)">
+  <div class="err" id="err">${esc(S.err||"")}</div>
+  <button class="btn" style="width:48%" onclick="A.login()">Connexion</button>
+  <button class="btn" style="width:48%" onclick="A.signup()">Créer un compte</button></div>`}
+function termsHTML(){return `<div class="auth"><div class="logo" style="font-size:30px">Conditions légales</div>
+  <div class="box" style="text-align:left;margin:14px 0;font-size:13px;color:var(--mu);max-height:42vh">
+  <p><b>1. Contenu.</b> Tu ne publies que des photos et du texte que tu as le droit de partager. Vidéos et sons sont interdits.</p>
+  <p><b>2. Respect.</b> Pas de haine, harcèlement, contenu illégal, spam ou usurpation d'identité. Les contenus abusifs peuvent être supprimés.</p>
+  <p><b>3. Données.</b> Pseudo, photo de profil, publications, likes, abonnements et statistiques de vues sont stockés (Firebase/Google) pour faire fonctionner le service et personnaliser tes recommandations.</p>
+  <p><b>4. Publicité.</b> PIDE Post affiche des publicités ; des services tiers peuvent utiliser des cookies.</p>
+  <p><b>5. Responsabilité.</b> Tu es responsable de ce que tu publies et tu peux supprimer tes posts à tout moment.</p></div>
+  <label style="display:flex;gap:8px;text-align:left;align-items:flex-start"><input type="checkbox" id="ok" style="width:auto;margin-top:3px">J'ai lu et j'accepte les conditions légales et la politique de confidentialité.</label>
+  <div class="err" id="err">${esc(S.err||"")}</div>
+  <button class="pri" onclick="A.accept()">Accepter et continuer</button> <button class="btn" onclick="A.out()">Refuser</button></div>`}
+
+function render(){
+  S.adUsed=false;const a=$("app");
+  if(!S.user)return a.innerHTML=authHTML();
+  if(S.boot)return a.innerHTML=`<div class="auth"><div class="logo" style="font-size:30px">Oups</div><p class="err">${esc(S.boot)}</p><button class="pri" onclick="boot(auth.currentUser)">Réessayer</button> <button class="btn" onclick="A.out()">Se déconnecter</button></div>`;
+  if(!S.me)return a.innerHTML=termsHTML();
+  const nav=[["foryou","🏠","Pour toi"],["trend","🔥","Tendances"],["recent","🕒","Récents"],["follow","👥","Abonnements"],["saved","🔖","Enregistrés"]];
+  const fl=[...S.follows].filter(id=>S.users[id]).slice(0,8),un=S.notifs.filter(n=>!n.read).length;applyTheme();
+  a.innerHTML=`<div class="top"><span class="logo" onclick="A.go('foryou')">PIDE Post</span>
+    <div class="search"><input placeholder="Rechercher un post, un #hashtag, un auteur…" value="${esc(S.q)}" onkeydown="if(event.key==='Enter')A.search(this.value)"></div>
+    <button class="pri" onclick="A.compose()">+ Créer</button><span class="bell" onclick="A.notifs()">🔔${un?`<b>${un}</b>`:""}</span><span style="cursor:pointer" onclick="A.profile('${S.user.uid}')">${av(S.user.uid,34)}</span></div>
+    <div class="lay"><nav class="side">${nav.map(n=>`<div class="ni ${S.view.t==="feed"&&S.tab===n[0]?"on":""}" onclick="A.go('${n[0]}')"><span>${n[1]}</span>${n[2]}</div>`).join("")}
+    <div class="ni ${S.view.t==="profile"&&S.view.uid===S.user.uid?"on":""}" onclick="A.profile('${S.user.uid}')"><span>👤</span>Mon profil</div>
+    <div class="ni ${S.view.t==="settings"?"on":""}" onclick="A.settings()"><span>⚙️</span>Paramètres</div>
+    ${fl.length?`<h4 class="fl">Mes abonnements</h4>`+fl.map(id=>`<div class="ni fl" onclick="A.profile('${id}')">${av(id,24)}<span>${esc(nm(id))}</span></div>`).join(""):""}</nav>
+    <main class="ct" id="ct"></main></div><div id="modal"></div>`;
+  ({feed:renderFeed,post:renderPost,profile:renderProfile,settings:renderSettings,notifs:renderNotifs})[S.view.t]()}
+
+function cover(p){
+  const t=p.title||p.text||"";
+  return p.thumb?`<img loading="lazy" src="${p.thumb}">`:`<div class="tc" style="background:linear-gradient(135deg,hsl(${hue(p.id)} 65% 32%),hsl(${hue(p.id)+50} 65% 22%))">${esc(t.slice(0,90))}</div>`}
+function cardHTML(p){
+  const n=(p.imgs||[]).length;
+  return `<div class="vc" data-id="${p.id}" onclick="A.open('${p.id}')"><div class="th">${cover(p)}${n>1?`<span class="bd">▣ ${n}</span>`:""}${p.poll?`<span class="bd l">📊 Sondage</span>`:""}</div>
+    <div class="row"><span onclick="event.stopPropagation();A.profile('${p.authorId}')">${av(p.authorId)}</span>
+    <div><div class="ti">${esc(p.title||p.text||"Photo")}</div><div class="sub">${esc(nm(p.authorId,p.authorName))}</div>
+    <div class="sub">${fmt(p.views)} vues · ${ago(p.createdAt)} · ♥ ${fmt(p.likes)}</div></div></div></div>`}
+const gridHTML=l=>l.length?`<div class="gr">${l.map((p,i)=>cardHTML(p)+(i===4?adSlot():"")).join("")}</div>`:`<div class="empty">Rien à voir ici pour l'instant.<br><button class="pri" onclick="A.compose()">Publier un post</button></div>`;
+function afterGrid(){
+  const io=new IntersectionObserver(es=>es.forEach(e=>{if(!e.isIntersecting)return;io.unobserve(e.target);
+    const id=e.target.dataset.id;if(id&&once("i_"+id)){const p=S.posts.find(x=>x.id===id);
+      if(p&&p.authorId!==S.user.uid)updateDoc(doc(db,"posts",id),{impressions:increment(1)}).catch(()=>{})}}),{threshold:.6});
+  document.querySelectorAll(".vc[data-id]").forEach(c=>io.observe(c));injectAd()}
+
+function renderFeed(){
+  $("ct").innerHTML=`<div class="chips">${CATS.map(c=>`<button class="chip ${S.cat===c?"on":""}" onclick="A.cat('${c}')">${c}</button>`).join("")}${S.tag?`<button class="chip on" onclick="A.filter(null)">#${esc(S.tag)} ✕</button>`:""}</div>${S.tag?"":tagRow()}${gridHTML(visible())}`;
+  afterGrid()}
+
+async function renderProfile(){
+  const uid=S.view.uid;$("ct").innerHTML="<p>Chargement…</p>";
+  try{const [u,ps]=await Promise.all([getDoc(doc(db,"users",uid)),getDocs(query(collection(db,"posts"),where("authorId","==",uid)))]);
+  if(!u.exists())return $("ct").innerHTML="<p>Profil introuvable.</p>";
+  const d=u.data();S.users[uid]=d;
+  const list=ps.docs.map(x=>({id:x.id,...x.data()})).sort((a,b)=>ms(b)-ms(a));
+  list.forEach(p=>{if(!S.posts.find(x=>x.id===p.id))S.posts.push(p)});
+  const own=uid===S.user.uid,fl=S.follows.has(uid),h=d.bannerHue??hue(uid);
+  $("ct").innerHTML=`<div class="banner" style="background:linear-gradient(120deg,hsl(${h} 70% 35%),hsl(${h+70} 70% 28%))"></div>
+    <div class="ph"><div style="position:relative">${av(uid,110)}${own?`<label class="cam" title="Changer la photo">📷<input type="file" accept="image/*" hidden onchange="A.avatar(this)"></label>`:""}</div>
+    <div style="flex:1;min-width:200px"><h2 style="margin:0">${esc(d.name)}</h2><div class="sub">${folTxt(uid)?folTxt(uid)+" · ":""}${list.length} posts</div>
+    ${d.bio?`<div style="margin-top:6px">${esc(d.bio)}</div>`:""}</div>
+    ${own?`<button class="btn" onclick="A.settings()">⚙️ Paramètres</button>`:`<button class="fol ${fl?"on":""}" onclick="A.follow('${uid}')">${fl?"✓ Abonné":"+ S'abonner"}</button>`}</div>${gridHTML(list)}`;
+  afterGrid()}catch(e){$("ct").innerHTML=`<p class="err">${esc(errMsg(e))}</p>`}}
+
+const pollHTML=p=>{if(!p.poll)return"";const v=S.votes[p.id],tot=p.poll.opts.reduce((a,_,i)=>a+(p.pv?.[i]||0),0),show=v!==undefined||p.authorId===S.user.uid;
+  return `<div class="poll"><b>📊 ${esc(p.poll.q||"Sondage")}</b>${p.poll.opts.map((o,i)=>{const pc=tot?Math.round((p.pv?.[i]||0)*100/tot):0;
+    return show?`<div class="po"><i style="width:${pc}%"></i><span>${esc(o)}${v===i?" ✓":""}</span><em>${pc}%</em></div>`:`<button class="po" onclick="A.vote('${p.id}',${i})"><span>${esc(o)}</span></button>`}).join("")}<div class="sub" style="margin-top:6px">${tot} vote${tot>1?"s":""}</div></div>`};
+const linkHTML=p=>{if(!p.link)return"";let h;try{h=new URL(p.link).hostname}catch{return""}
+  return `<a class="lc" href="${esc(p.link)}" target="_blank" rel="noopener noreferrer">🔗 <b>${esc(h)}</b><span>${esc(p.link.slice(0,70))}</span></a>`};
+const cmHTML=l=>l.length?l.map(c=>`<div class="cm"><span onclick="A.profile('${c.uid}')" style="cursor:pointer">${av(c.uid,34)}</span><div><b>${esc(nm(c.uid,c.name))}</b> <span class="sub">${ago(c.createdAt)}</span><div>${esc(c.text)}</div></div></div>`).join(""):`<div class="sub">Sois le premier à commenter.</div>`;
+
+function renderPost(){
+  const p=S.posts.find(x=>x.id===S.view.id);if(!p){S.view={t:"feed"};return render()}
+  const imgs=p.imgs||[],gi=Math.min(S.gi,imgs.length-1),own=p.authorId===S.user.uid,fl=S.follows.has(p.authorId);const sv=(S.me.saved||[]).includes(p.id),cmOn=S.users[p.authorId]?.settings?.comments!==false;
+  const rec=S.posts.filter(x=>x.id!==p.id).sort((a,b)=>score(b)-score(a)).slice(0,8);
+  const desc=esc(p.text).replace(/#([\p{L}\p{N}_]{2,30})/gu,(m,t)=>`<span class="tag" onclick="A.filter('${t.toLowerCase()}')">${m}</span>`);
+  const d=p.createdAt?.toDate?.().toLocaleDateString("fr-FR",{day:"numeric",month:"long",year:"numeric"})||"";
+  $("ct").innerHTML=`<div class="wt"><div>
+    ${imgs.length?`<div class="gal"><img src="${imgs[gi]}">${imgs.length>1?`<button class="ar l" onclick="A.gal(-1)">‹</button><button class="ar r" onclick="A.gal(1)">›</button><span class="bd">${gi+1} / ${imgs.length}</span>`:""}</div>`:""}
+    ${p.title?`<h1 class="h1">${esc(p.title)}</h1>`:""}
+    <div class="ab"><span onclick="A.profile('${p.authorId}')" style="cursor:pointer">${av(p.authorId,44)}</span>
+      <div><b style="cursor:pointer" onclick="A.profile('${p.authorId}')">${esc(nm(p.authorId,p.authorName))}</b><div class="sub">${folTxt(p.authorId)}</div></div>
+      ${own?`<button class="btn" onclick="A.edit('${p.id}')">✏️ Modifier</button> <button class="btn" onclick="A.del('${p.id}')">🗑</button>`:`<button class="fol ${fl?"on":""}" onclick="A.follow('${p.authorId}')">${fl?"✓ Abonné":"+ S'abonner"}</button>`}
+      <span class="sp"></span><div class="pill"><button class="${S.likes.has(p.id)?"on":""}" onclick="A.like('${p.id}')">♥ ${fmt(p.likes)}</button><button onclick="A.share('${p.id}')">↗ Partager</button><button class="${sv?"on":""}" title="Enregistrer" onclick="A.save('${p.id}')">🔖</button>${own?"":`<button title="Signaler" onclick="A.report('${p.id}')">⚑</button>`}</div></div>
+    <div class="desc"><b>${fmt(p.views)} vues · ${d}</b>
+      <div class="meta">${p.cat?`<span class="mc">${esc(p.cat)}</span>`:""}${p.mood?`<span class="mc">${esc(p.mood)}</span>`:""}${p.place?`<span class="mc">📍 ${esc(p.place)}</span>`:""}</div>${desc}</div>
+    ${linkHTML(p)}${pollHTML(p)}
+    <h3 style="margin-top:24px">${fmt(p.comments)} commentaire${p.comments>1?"s":""}</h3>
+    ${cmOn?`<div class="cm">${av(S.user.uid,34)}<div style="flex:1"><input id="ct2" maxlength="500" placeholder="Ajouter un commentaire…" onkeydown="if(event.key==='Enter')A.comment('${p.id}')"><button class="pri" onclick="A.comment('${p.id}')">Commenter</button></div></div>`:`<div class="sub">Les commentaires sont désactivés pour ce post.</div>`}
+    <div id="cms">${S.cm[p.id]?cmHTML(S.cm[p.id]):""}</div></div>
+    <aside><h4 style="margin:0 0 12px;color:var(--mu)">À voir ensuite</h4>${rec.map((r,i)=>`<div class="mr" data-id="${r.id}" onclick="A.open('${r.id}')"><div class="th">${cover(r)}</div><div><div class="ti" style="font-size:14px">${esc(r.title||r.text||"Photo")}</div><div class="sub">${esc(nm(r.authorId,r.authorName))}</div><div class="sub">${fmt(r.views)} vues · ♥ ${fmt(r.likes)}</div></div></div>`+(i===2?adSlot():"")).join("")}</aside></div>`;
+  if(!S.cm[p.id])A.loadCm(p.id);
+  injectAd()}
+
+function renderSettings(){
+  const s=S.me.settings||{},u=auth.currentUser,uid=S.user.uid,top=Object.entries(S.me.tagWeights||{}).sort((a,b)=>b[1]-a[1]).slice(0,10),h=S.me.bannerHue??hue(uid);
+  const sw=(k,l,on)=>`<div class="sr"><span>${l}</span><input type="checkbox" style="width:auto" ${on?"checked":""} onchange="A.pref('${k}',this.checked)"></div>`;
+  const ac=["#00e5ff","#39ff88","#ffa63d","#a56bff","#ff5c8a"];
+  $("ct").innerHTML=`<div style="max-width:680px"><h2 style="margin-top:0">⚙️ Paramètres</h2>
+  <div class="sc"><h3>Profil</h3><div style="display:flex;gap:14px;align-items:center;flex-wrap:wrap">${av(uid,72)}<div><label class="btn" style="display:inline-block">📷 Changer la photo<input type="file" accept="image/*" hidden onchange="A.avatar(this)"></label> <button class="btn" onclick="A.rmAvatar()">Supprimer</button></div></div>
+   <input id="sn" maxlength="30" placeholder="Pseudo" value="${esc(S.me.name)}"><textarea id="sb" rows="3" maxlength="200" placeholder="Bio">${esc(S.me.bio||"")}</textarea>
+   <div class="sub">Couleur de la bannière</div><input id="bh" type="range" min="0" max="360" value="${h}" oninput="this.nextElementSibling.style.background='hsl('+this.value+' 70% 35%)'"><div class="banner" style="height:40px;background:hsl(${h} 70% 35%)"></div>
+   <button class="pri" style="margin-top:12px" onclick="A.saveProfile()">Enregistrer le profil</button></div>
+  <div class="sc"><h3>Apparence</h3><div class="sr"><span>Thème</span><select style="width:auto" onchange="A.pref('theme',this.value)"><option value="dark" ${s.theme!=="light"?"selected":""}>Sombre</option><option value="light" ${s.theme==="light"?"selected":""}>Clair</option></select></div>
+   <div class="sr"><span>Couleur d'accent</span><span>${ac.map(c=>`<span class="dot ${(s.accent||ac[0])===c?"on":""}" style="background:${c}" onclick="A.pref('accent','${c}')"></span>`).join(" ")}</span></div></div>
+  <div class="sc"><h3>Confidentialité</h3>${sw("comments","Autoriser les commentaires sur mes posts",s.comments!==false)}${sw("showFollowers","Afficher mon nombre d'abonnés",s.showFollowers!==false)}</div>
+  <div class="sc"><h3>Recommandations</h3><div class="sub">Tes centres d'intérêt appris :</div><div class="meta">${top.length?top.map(t=>`<span class="mc">#${esc(t[0])}</span>`).join(""):`<span class="sub">Rien encore : like et commente des posts.</span>`}</div><button class="btn" onclick="A.resetReco()">Réinitialiser mes recommandations</button></div>
+  <div class="sc"><h3>Compte</h3><div class="sr"><span>Email</span><span class="sub">${esc(u.email||"Compte Google")}</span></div>
+   <div class="sr"><span>Mot de passe</span><button class="btn" onclick="A.resetPw()">Envoyer un email de réinitialisation</button></div>
+   <div class="sr"><span>Mes données</span><button class="btn" onclick="A.exportData()">Télécharger (JSON)</button></div>
+   <div class="sr"><span>Session</span><button class="btn" onclick="A.out()">Se déconnecter</button></div>
+   <div class="sr"><span>Supprimer mon compte et mes posts</span><button class="dg" onclick="A.delAccount()">Supprimer</button></div></div></div>`}
+function renderNotifs(){
+  const T={like:"a aimé ton post",comment:"a commenté ton post",follow:"s'est abonné à toi"};
+  $("ct").innerHTML=`<div style="max-width:680px"><h2 style="margin-top:0">🔔 Notifications</h2>${S.notifs.length?S.notifs.map(n=>`<div class="nt ${n.read?"":"un"}" onclick="${n.pid?`A.open('${n.pid}')`:`A.profile('${n.from}')`}">${av(n.from,40)}<div><b>${esc(nm(n.from))}</b> ${T[n.type]||""}<div class="sub">${ago(n.createdAt)}</div></div></div>`).join(""):`<div class="empty">Aucune notification pour l'instant.</div>`}</div>`}
+
+/* ---------- Actions ---------- */
+window.boot=boot;window.auth=auth;
+const A=window.A={
+  go(t){history.replaceState(null,"",location.pathname);S.view={t:"feed"};S.tab=t;S.q="";S.tag=null;S.cat="Tout";loadFeed().then(render).catch(render)},
+  cat(c){S.cat=c;renderFeed()},
+  search(q){S.q=q.trim();S.view={t:"feed"};S.tab="foryou";render()},
+  filter(t){S.tag=t;S.view={t:"feed"};render()},
+  out(){signOut(auth)},
+  async google(){showErr("");try{await signInWithPopup(auth,new GoogleAuthProvider())}catch(e){showErr(errMsg(e))}},
+  async signup(){
+    const n=$("nm").value.trim(),em=$("em").value.trim(),pw=$("pw").value;
+    if(n.length<2)return showErr("Choisis un pseudo (2 caractères min.).");
+    if(!em)return showErr("Entre ton email.");
+    showErr("");S.busy=true;
+    try{const c=await createUserWithEmailAndPassword(auth,em,pw);try{await updateProfile(c.user,{displayName:n})}catch(e){}}
+    catch(e){showErr(errMsg(e))}
+    S.busy=false;if(auth.currentUser)await boot(auth.currentUser)},
+  async login(){const em=$("em").value.trim();if(!em)return showErr("Entre ton email.");
+    showErr("");try{await signInWithEmailAndPassword(auth,em,$("pw").value)}catch(e){showErr(errMsg(e))}},
+  async accept(){
+    if(!$("ok").checked)return showErr("Tu dois accepter les conditions.");
+    try{const u=auth.currentUser,me={name:u.displayName||(u.email||"membre").split("@")[0],photo:u.photoURL||"",bio:"",followers:0,tagWeights:{},terms:true,termsAt:serverTimestamp()};
+      await setDoc(doc(db,"users",u.uid),me);S.me=me;await loadSocial();await loadFeed();render()}
+    catch(e){console.error(e);showErr(errMsg(e))}},
+  profile(uid){S.view={t:"profile",uid};render();scrollTo(0,0)},
+  async avatar(inp){const f=inp.files[0];if(!f)return;
+    try{const d=await shrink(f,256,.8);await updateDoc(doc(db,"users",S.user.uid),{photo:d});S.me.photo=d;S.users[S.user.uid]=S.me;render()}catch(e){alert(errMsg(e))}},
+  async editProfile(){
+    const n=prompt("Pseudo :",S.me.name);if(n===null)return;const b=prompt("Bio (à propos de toi) :",S.me.bio||"");
+    const u={name:n.trim()||S.me.name};if(b!==null)u.bio=b.trim().slice(0,200);
+    try{await updateDoc(doc(db,"users",S.user.uid),u);Object.assign(S.me,u);render()}catch(e){alert(errMsg(e))}},
+  compose(){S.mood="";$("modal").innerHTML=`<div class="modal"><div class="box"><h3 style="margin-top:0">Créer un post</h3>
+    <input id="ti" maxlength="100" placeholder="Titre (optionnel)">
+    <textarea id="pt" rows="4" maxlength="2000" placeholder="Écris quelque chose… ajoute des #hashtags"></textarea>
+    <input id="pf" type="file" accept="image/*" multiple onchange="A.prev(this)"><div class="prev" id="pv"></div>
+    <select id="cat">${CATS.slice(1).map(c=>`<option>${c}</option>`).join("")}</select>
+    <div class="mood" style="margin:6px 0">${["😀","😍","😎","🔥","😂","🤔","😢","🎉"].map(e=>`<button type="button" onclick="A.mood(this,'${e}')">${e}</button>`).join(" ")}</div>
+    <input id="lo" maxlength="60" placeholder="📍 Lieu (optionnel)"><input id="lk" placeholder="🔗 Lien (optionnel)">
+    <label><input type="checkbox" id="pollon" style="width:auto" onchange="$('pollbox').style.display=this.checked?'block':'none'"> Ajouter un sondage</label>
+    <div id="pollbox" style="display:none"><input id="pq" placeholder="Question du sondage">${[1,2,3,4].map(i=>`<input class="pop" placeholder="Choix ${i}">`).join("")}</div>
+    <div class="err" id="err">Photos (jusqu'à 4) et texte uniquement.</div>
+    <button class="pri" id="pb" onclick="A.publish()">Publier</button> <button class="btn" onclick="A.close()">Annuler</button></div></div>`},
+  mood(b,e){S.mood=S.mood===e?"":e;b.parentNode.querySelectorAll("button").forEach(x=>x.classList.toggle("on",x.textContent===S.mood))},
+  prev(i){$("pv").innerHTML=[...i.files].slice(0,4).map(f=>`<img src="${URL.createObjectURL(f)}">`).join("")},
+  close(){$("modal").innerHTML=""},
+  async publish(){
+    const title=$("ti").value.trim(),text=$("pt").value.trim(),fs=[...$("pf").files].slice(0,4);let link=$("lk").value.trim();
+    const opts=$("pollon").checked?[...document.querySelectorAll(".pop")].map(i=>i.value.trim()).filter(Boolean):[];
+    if(!title&&!text&&!fs.length)return showErr("Ajoute un titre, du texte ou une photo.");
+    if($("pollon").checked&&opts.length<2)return showErr("Un sondage a besoin d'au moins 2 choix.");
+    if(link){if(!/^https?:\/\//i.test(link))link="https://"+link;try{new URL(link)}catch{return showErr("Lien invalide.")}}
+    $("pb").disabled=true;showErr("Publication…");
+    try{const imgs=[];for(const f of fs)imgs.push(await shrink(f,900,.6));
+      const thumb=fs[0]?await shrink(fs[0],480,.65):"";
+      if(imgs.join("").length+thumb.length>900000)throw new Error("Photos trop lourdes : choisis-en moins.");
+      const tags=[...new Set([...(title+" "+text).matchAll(TAG)].map(m=>m[1].toLowerCase()))].slice(0,10);
+      const d={title,text,tags,imgs,thumb,cat:$("cat").value,mood:S.mood,place:$("lo").value.trim(),link,authorId:S.user.uid,authorName:S.me.name,likes:0,comments:0,views:0,clicks:0,impressions:0,createdAt:serverTimestamp()};
+      if(opts.length){d.poll={q:$("pq").value.trim(),opts};d.pv={}}
+      await addDoc(collection(db,"posts"),d);boost(tags,2);await loadFeed();A.close();S.view={t:"feed"};render()}
+    catch(e){showErr(errMsg(e));$("pb").disabled=false}},
+  async open(id){
+    const p=S.posts.find(x=>x.id===id);if(!p)return;
+    if(p.authorId!==S.user.uid){
+      if(once("v_"+id)){p.views=(p.views||0)+1;updateDoc(doc(db,"posts",id),{views:increment(1)}).catch(()=>{});boost(p.tags,1)}
+      if(once("c_"+id)){p.clicks=(p.clicks||0)+1;updateDoc(doc(db,"posts",id),{clicks:increment(1)}).catch(()=>{})}}
+    S.view={t:"post",id};S.gi=0;history.replaceState(null,"","#"+id);render();scrollTo(0,0)},
+  gal(d){const p=S.posts.find(x=>x.id===S.view.id),n=p.imgs.length;S.gi=(S.gi+d+n)%n;renderPost()},
+  async loadCm(id){try{const cs=await getDocs(query(collection(db,"posts",id,"comments"),orderBy("createdAt","asc"),limit(100)));
+    S.cm[id]=cs.docs.map(d=>d.data());if(S.view.id===id&&$("cms"))$("cms").innerHTML=cmHTML(S.cm[id])}catch(e){if($("cms"))$("cms").innerHTML=`<span class="err">${esc(errMsg(e))}</span>`}},
+  async like(id){
+    const p=S.posts.find(x=>x.id===id),ref=doc(db,"likes",id+"_"+S.user.uid);
+    try{if(S.likes.has(id)){S.likes.delete(id);p.likes--;renderPost();await deleteDoc(ref);updateDoc(doc(db,"posts",id),{likes:increment(-1)})}
+    else{S.likes.add(id);p.likes=(p.likes||0)+1;renderPost();await setDoc(ref,{pid:id,uid:S.user.uid});updateDoc(doc(db,"posts",id),{likes:increment(1)});boost(p.tags,3);notify(p.authorId,"like",id)}}catch(e){alert(errMsg(e))}},
+  async vote(id,i){const p=S.posts.find(x=>x.id===id);if(S.votes[id]!==undefined)return;
+    S.votes[id]=i;p.pv=p.pv||{};p.pv[i]=(p.pv[i]||0)+1;renderPost();
+    try{await setDoc(doc(db,"likes","v_"+id+"_"+S.user.uid),{pid:id,uid:S.user.uid,vote:i});await updateDoc(doc(db,"posts",id),{["pv."+i]:increment(1)})}catch(e){alert(errMsg(e))}},
+  async comment(id){
+    const t=$("ct2").value.trim();if(!t)return;const p=S.posts.find(x=>x.id===id);
+    try{const c={text:t,name:S.me.name,uid:S.user.uid,createdAt:serverTimestamp()};
+      await addDoc(collection(db,"posts",id,"comments"),c);updateDoc(doc(db,"posts",id),{comments:increment(1)});
+      p.comments=(p.comments||0)+1;(S.cm[id]=S.cm[id]||[]).push({...c,createdAt:{toMillis:()=>Date.now()}});boost(p.tags,4);notify(p.authorId,"comment",id);renderPost()}catch(e){alert(errMsg(e))}},
+  async del(id){if(!confirm("Supprimer ce post ?"))return;
+    try{await deleteDoc(doc(db,"posts",id));S.posts=S.posts.filter(x=>x.id!==id);S.view={t:"feed"};render()}catch(e){alert(errMsg(e))}},
+  async follow(uid){
+    const ref=doc(db,"follows",S.user.uid+"_"+uid),u=S.users[uid]||{};
+    try{if(S.follows.has(uid)){S.follows.delete(uid);u.followers=Math.max(0,(u.followers||0)-1);render();await deleteDoc(ref);updateDoc(doc(db,"users",uid),{followers:increment(-1)})}
+    else{S.follows.add(uid);u.followers=(u.followers||0)+1;render();await setDoc(ref,{from:S.user.uid,to:uid});updateDoc(doc(db,"users",uid),{followers:increment(1)});notify(uid,"follow")}}catch(e){alert(errMsg(e))}},
+  settings(){S.view={t:"settings"};render();scrollTo(0,0)},
+  notifs(){S.view={t:"notifs"};render();S.notifs.filter(n=>!n.read).forEach(n=>{n.read=true;updateDoc(doc(db,"notifs",n.id),{read:true}).catch(()=>{})})},
+  save(id){const a=S.me.saved||[],on=a.includes(id);S.me.saved=on?a.filter(x=>x!==id):[...a,id];
+    updateDoc(doc(db,"users",S.user.uid),{saved:on?arrayRemove(id):arrayUnion(id)}).catch(e=>alert(errMsg(e)));toast(on?"Retiré des enregistrés":"Post enregistré");renderPost()},
+  share(id){const u=location.origin+location.pathname+"#"+id;(navigator.clipboard?navigator.clipboard.writeText(u):Promise.reject()).then(()=>toast("Lien copié"),()=>prompt("Copie le lien :",u))},
+  async report(id){const r=prompt("Pourquoi signaler ce post ? (spam, haine, contenu illégal…)");if(!r)return;
+    try{await addDoc(collection(db,"reports"),{pid:id,uid:S.user.uid,reason:r.slice(0,300),createdAt:serverTimestamp()});toast("Signalement envoyé, merci")}catch(e){alert(errMsg(e))}},
+  async edit(id){const p=S.posts.find(x=>x.id===id),t=prompt("Titre :",p.title||"");if(t===null)return;const x=prompt("Texte :",p.text||"");if(x===null)return;
+    const tags=[...new Set([...(t+" "+x).matchAll(TAG)].map(m=>m[1].toLowerCase()))].slice(0,10);
+    try{await updateDoc(doc(db,"posts",id),{title:t.trim(),text:x.trim(),tags});Object.assign(p,{title:t.trim(),text:x.trim(),tags});renderPost()}catch(e){alert(errMsg(e))}},
+  async saveProfile(){const u={name:$("sn").value.trim()||S.me.name,bio:$("sb").value.trim().slice(0,200),bannerHue:+$("bh").value};
+    try{await updateDoc(doc(db,"users",S.user.uid),u);Object.assign(S.me,u);toast("Profil enregistré");render()}catch(e){alert(errMsg(e))}},
+  async rmAvatar(){try{await updateDoc(doc(db,"users",S.user.uid),{photo:""});S.me.photo="";render()}catch(e){alert(errMsg(e))}},
+  pref(k,v){S.me.settings={...(S.me.settings||{}),[k]:v};updateDoc(doc(db,"users",S.user.uid),{["settings."+k]:v}).catch(e=>alert(errMsg(e)));applyTheme();if(k==="theme"||k==="accent")render()},
+  async resetReco(){if(!confirm("Réinitialiser tes recommandations ?"))return;
+    try{await updateDoc(doc(db,"users",S.user.uid),{tagWeights:{}});S.me.tagWeights={};toast("Recommandations réinitialisées");render()}catch(e){alert(errMsg(e))}},
+  async resetPw(){const e=auth.currentUser.email;if(!e)return alert("Ton compte utilise Google : change ton mot de passe depuis ton compte Google.");
+    try{await sendPasswordResetEmail(auth,e);toast("Email de réinitialisation envoyé")}catch(x){alert(errMsg(x))}},
+  exportData(){const mine=S.posts.filter(p=>p.authorId===S.user.uid).map(({thumb,imgs,...r})=>({...r,photos:(imgs||[]).length,createdAt:r.createdAt?.toDate?.().toISOString()}));
+    const b=new Blob([JSON.stringify({profil:{...S.me,termsAt:undefined},posts:mine,enregistres:S.me.saved||[],abonnements:[...S.follows],likes:[...S.likes]},null,2)],{type:"application/json"});
+    const a=document.createElement("a");a.href=URL.createObjectURL(b);a.download="pide-post-mes-donnees.json";a.click()},
+  async delAccount(){
+    if(prompt("Suppression définitive de ton compte et de tes posts. Tape SUPPRIMER pour confirmer :")!=="SUPPRIMER")return;
+    const u=auth.currentUser;
+    try{if(u.providerData[0]?.providerId==="google.com")await reauthenticateWithPopup(u,new GoogleAuthProvider());
+      else{const pw=prompt("Entre ton mot de passe pour confirmer :");if(!pw)return;await reauthenticateWithCredential(u,EmailAuthProvider.credential(u.email,pw))}
+      const ps=await getDocs(query(collection(db,"posts"),where("authorId","==",u.uid)));
+      await Promise.all(ps.docs.map(d=>deleteDoc(d.ref)));await deleteDoc(doc(db,"users",u.uid));await deleteUser(u)}
+    catch(e){alert(errMsg(e))}}
+};
+</script>
+</body>
+</html><!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>PIDE Post</title>
+<style>
+:root{--bg:#0f0f17;--sf:#181826;--sf2:#252540;--tx:#f2f2fa;--mu:#9a9ab8;--c1:#00e5ff;--c2:#ff2bd6;--r:14px}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--tx);font:14px/1.4 system-ui,sans-serif}
+button,input,textarea,select{font:inherit;color:inherit}
+a{color:inherit;text-decoration:none}
+.logo{font-weight:900;font-size:22px;letter-spacing:-.5px;background:linear-gradient(90deg,var(--c1),var(--c2));-webkit-background-clip:text;color:transparent;cursor:pointer;white-space:nowrap}
 .top{position:sticky;top:0;z-index:9;height:56px;display:flex;align-items:center;gap:14px;padding:0 16px;background:#0f0f17f2;backdrop-filter:blur(10px)}
 .search{flex:1;max-width:520px;margin:0 auto}
 .search input{width:100%;margin:0;border-radius:22px;background:var(--sf);border:1px solid var(--sf2);padding:9px 16px}
