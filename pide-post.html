@@ -1,0 +1,245 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>PIDE Post</title>
+<style>
+:root{--bg:#0a0a14;--card:#12122a;--line:#26264a;--txt:#e8e8ff;--mut:#8888b0;--c1:#00f0ff;--c2:#ff2bd6}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--txt);font:15px system-ui,sans-serif}
+button,input,textarea{font:inherit;color:inherit}
+.logo{font-weight:900;font-size:22px;background:linear-gradient(90deg,var(--c1),var(--c2));-webkit-background-clip:text;color:transparent;cursor:pointer}
+header{position:sticky;top:0;z-index:5;display:flex;gap:10px;align-items:center;padding:10px 16px;background:#0a0a14ee;border-bottom:1px solid var(--line);backdrop-filter:blur(8px)}
+header .sp{flex:1}
+.btn{background:transparent;border:1px solid var(--c1);color:var(--c1);padding:8px 14px;border-radius:10px;cursor:pointer}
+.btn:hover{background:#00f0ff22}
+.btn.p{background:linear-gradient(90deg,var(--c1),var(--c2));border:0;color:#000;font-weight:700}
+.btn.sm{padding:4px 10px;font-size:13px}
+.wrap{max-width:1000px;margin:0 auto;padding:16px}
+.tabs{display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap;align-items:center}
+.tab{padding:6px 14px;border-radius:20px;border:1px solid var(--line);background:none;cursor:pointer;color:var(--mut)}
+.tab.on{border-color:var(--c2);color:var(--c2)}
+.grid{columns:3 260px;column-gap:14px}
+.card{break-inside:avoid;background:var(--card);border:1px solid var(--line);border-radius:14px;margin-bottom:14px;overflow:hidden;cursor:pointer}
+.card:hover{border-color:var(--c1)}
+.card img.th{width:100%;display:block}
+.card .b{padding:10px 12px}
+.txt{white-space:pre-wrap;word-break:break-word}
+.meta{display:flex;gap:12px;color:var(--mut);font-size:13px;margin-top:8px}
+.tag{color:var(--c1);cursor:pointer}
+.au{display:flex;align-items:center;gap:8px;font-size:13px;color:var(--mut)}
+.av{width:26px;height:26px;border-radius:50%;background:var(--line);object-fit:cover}
+.ad{border:1px dashed var(--c2);padding:12px;text-align:center;color:var(--mut);font-size:12px;min-height:70px;cursor:default}
+.modal{position:fixed;inset:0;background:#000c;z-index:20;display:flex;align-items:center;justify-content:center;padding:12px}
+.box{background:var(--card);border:1px solid var(--line);border-radius:16px;max-width:560px;width:100%;max-height:92vh;overflow:auto;padding:18px}
+input,textarea{width:100%;background:#0a0a1c;border:1px solid var(--line);border-radius:10px;padding:10px;margin:5px 0}
+.auth{max-width:380px;margin:8vh auto;padding:20px;text-align:center}
+.err{color:#ff5470;font-size:13px;min-height:18px}
+.cm{border-top:1px solid var(--line);padding:8px 0;font-size:14px}
+.cm b{color:var(--c2)}
+.pimg{width:100%;border-radius:10px;margin:8px 0}
+.lk{cursor:pointer;background:none;border:0;color:var(--mut);font-size:15px}
+.lk.on{color:var(--c2)}
+.hd{display:flex;gap:14px;align-items:center;margin-bottom:16px}
+.hd .av{width:64px;height:64px}
+</style>
+</head>
+<body>
+<div id="app"></div>
+<script type="module">
+import {initializeApp} from "https://www.gstatic.com/firebasejs/10.14.1/firebase-app.js";
+import {getAuth,onAuthStateChanged,signInWithPopup,GoogleAuthProvider,createUserWithEmailAndPassword,signInWithEmailAndPassword,updateProfile,signOut} from "https://www.gstatic.com/firebasejs/10.14.1/firebase-auth.js";
+import {getFirestore,collection,doc,getDoc,setDoc,addDoc,updateDoc,deleteDoc,query,orderBy,limit,getDocs,increment,serverTimestamp,where} from "https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js";
+
+const app=initializeApp({apiKey:"AIzaSyDtCmvlrwEblK8a5e0L9vwuLZ2XCIstiDo",authDomain:"pide-post.firebaseapp.com",projectId:"pide-post",storageBucket:"pide-post.firebasestorage.app",messagingSenderId:"664464722132",appId:"1:664464722132:web:6a1479bf8d1aea7e8b9341"});
+const auth=getAuth(app),db=getFirestore(app);
+const $=id=>document.getElementById(id);
+const esc=s=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const TAG=/#([\p{L}\p{N}_]{2,30})/gu;
+const S={user:null,me:null,posts:[],likes:new Set(),follows:new Set(),tab:"foryou",tag:null,view:{t:"feed"},seen:new Set(),adLoaded:false};
+const fmt=n=>n>=1e6?(n/1e6).toFixed(1)+"M":n>=1e3?(n/1e3).toFixed(1)+"k":(n||0);
+const ago=t=>{const m=(Date.now()-(t?.toMillis?.()||Date.now()))/6e4;return m<1?"à l'instant":m<60?Math.floor(m)+" min":m<1440?Math.floor(m/60)+" h":Math.floor(m/1440)+" j"};
+const once=k=>{k="pp_"+k;if(sessionStorage[k])return false;sessionStorage[k]=1;return true};
+
+/* ---------- Images (photos uniquement, compressées pour Firestore) ---------- */
+function shrink(file,max,q){return new Promise((ok,ko)=>{
+  if(!file.type.startsWith("image/"))return ko(new Error("Seules les photos sont autorisées (pas de vidéo ni de son)."));
+  const im=new Image,u=URL.createObjectURL(file);
+  im.onload=()=>{const r=Math.min(1,max/Math.max(im.width,im.height)),c=document.createElement("canvas");
+    c.width=im.width*r;c.height=im.height*r;c.getContext("2d").drawImage(im,0,0,c.width,c.height);URL.revokeObjectURL(u);ok(c.toDataURL("image/jpeg",q))};
+  im.onerror=()=>ko(new Error("Image illisible."));im.src=u})}
+
+/* ---------- Auth ---------- */
+onAuthStateChanged(auth,async u=>{
+  S.user=u;S.me=null;
+  if(u){const d=await getDoc(doc(db,"users",u.uid));if(d.exists())S.me=d.data();
+    if(S.me){await loadSocial();await loadFeed()}}
+  render()});
+async function loadSocial(){
+  const [l,f]=await Promise.all([getDocs(query(collection(db,"likes"),where("uid","==",S.user.uid))),getDocs(query(collection(db,"follows"),where("from","==",S.user.uid)))]);
+  S.likes=new Set(l.docs.map(d=>d.data().pid));S.follows=new Set(f.docs.map(d=>d.data().to))}
+async function loadFeed(){
+  const s=await getDocs(query(collection(db,"posts"),orderBy("createdAt","desc"),limit(80)));
+  S.posts=s.docs.map(d=>({id:d.id,...d.data()}))}
+
+/* ---------- Algorithme de recommandation ---------- */
+function score(p){
+  const tw=S.me?.tagWeights||{};
+  const aff=(p.tags||[]).reduce((a,t)=>a+Math.log1p(tw[t]||0),0);           // affinité hashtags
+  const eng=(p.likes||0)+2*(p.comments||0);                                   // likes + commentaires
+  const rate=(eng+1)/((p.views||0)+10);                                       // taux d'engagement
+  const ctr=((p.clicks||0)+1)/((p.impressions||0)+10);                        // clics sur miniature
+  const age=(Date.now()-(p.createdAt?.toMillis?.()||Date.now()))/36e5;
+  const fresh=Math.exp(-age/48);
+  const test=(p.views||0)<20?1.5:0;                                           // test des nouveaux posts
+  const fol=S.follows.has(p.authorId)?2:0;
+  return aff*1.2+rate*8+ctr*5+fresh*2+test+fol+Math.log1p(eng)*.5}
+function visible(){
+  let a=[...S.posts];
+  if(S.tag)a=a.filter(p=>(p.tags||[]).includes(S.tag));
+  if(S.tab==="recent")return a;
+  if(S.tab==="follow")return a.filter(p=>S.follows.has(p.authorId));
+  return a.sort((x,y)=>score(y)-score(x))}
+const boost=(tags,n)=>{if(!tags?.length||!S.me)return;const u={};tags.forEach(t=>{u["tagWeights."+t]=increment(n);S.me.tagWeights=S.me.tagWeights||{};S.me.tagWeights[t]=(S.me.tagWeights[t]||0)+n});
+  updateDoc(doc(db,"users",S.user.uid),u).catch(()=>{})};
+
+/* ---------- Rendu ---------- */
+function render(){
+  const a=$("app");
+  if(!S.user)return a.innerHTML=authHTML();
+  if(!S.me)return a.innerHTML=termsHTML();
+  a.innerHTML=`<header><span class="logo" onclick="A.home()">PIDE Post</span><span class="sp"></span>
+    <button class="btn p" onclick="A.compose()">+ Poster</button>
+    <button class="btn" onclick="A.profile('${S.user.uid}')">Mon profil</button>
+    <button class="btn" onclick="A.out()">Quitter</button></header>
+    <div class="wrap" id="main"></div><div id="modal"></div>`;
+  S.view.t==="profile"?renderProfile():renderFeed()}
+
+function authHTML(){return `<div class="auth"><div class="logo" style="font-size:40px">PIDE Post</div>
+  <p style="color:var(--mut)">Partage tes photos et tes idées.</p>
+  <button class="btn p" style="width:100%;margin:6px 0" onclick="A.google()">Continuer avec Google</button>
+  <p style="color:var(--mut);margin:12px 0">— ou par email —</p>
+  <input id="nm" placeholder="Pseudo (inscription)"><input id="em" type="email" placeholder="Email">
+  <input id="pw" type="password" placeholder="Mot de passe (6 caractères min.)">
+  <div class="err" id="err"></div>
+  <button class="btn" style="width:48%" onclick="A.login()">Connexion</button>
+  <button class="btn" style="width:48%" onclick="A.signup()">Créer un compte</button></div>`}
+
+function termsHTML(){return `<div class="auth"><div class="logo" style="font-size:30px">Conditions légales</div>
+  <div class="box" style="text-align:left;margin:14px 0;font-size:13px;color:var(--mut);max-height:42vh">
+  <p><b>1. Contenu.</b> Tu ne publies que des photos et du texte que tu as le droit de partager. Vidéos et sons sont interdits.</p>
+  <p><b>2. Respect.</b> Pas de haine, harcèlement, contenu illégal, sexuel impliquant des mineurs, spam ou usurpation d'identité. Les contenus abusifs peuvent être supprimés.</p>
+  <p><b>3. Données.</b> Ton pseudo, ta photo de profil, tes publications, likes, abonnements et statistiques de vues sont stockés (Firebase/Google) pour faire fonctionner le service et personnaliser tes recommandations par hashtags.</p>
+  <p><b>4. Publicité.</b> PIDE Post affiche des publicités ; des services tiers peuvent utiliser des cookies.</p>
+  <p><b>5. Responsabilité.</b> Tu es responsable de ce que tu publies. Le service est fourni « tel quel ». Tu peux supprimer tes posts à tout moment.</p></div>
+  <label style="display:flex;gap:8px;text-align:left;align-items:flex-start"><input type="checkbox" id="ok" style="width:auto;margin-top:3px">J'ai lu et j'accepte les conditions légales et la politique de confidentialité.</label>
+  <div class="err" id="err"></div>
+  <button class="btn p" onclick="A.accept()">Accepter et continuer</button>
+  <button class="btn" onclick="A.out()">Refuser</button></div>`}
+
+function cardHTML(p,i){
+  const ad=(i>0&&i%5===0)?`<div class="card ad" data-ad="1">Publicité</div>`:"";
+  return ad+`<div class="card" data-id="${p.id}" onclick="A.open('${p.id}')">
+    ${p.thumb?`<img class="th" loading="lazy" src="${p.thumb}">`:""}
+    <div class="b">${p.text?`<div class="txt">${esc(p.text.slice(0,180))}${p.text.length>180?"…":""}</div>`:""}
+    <div class="meta"><span>♥ ${fmt(p.likes)}</span><span>💬 ${fmt(p.comments)}</span><span>👁 ${fmt(p.views)}</span></div>
+    <div class="au" style="margin-top:8px">${p.authorPhoto?`<img class="av" src="${esc(p.authorPhoto)}">`:`<span class="av"></span>`}${esc(p.authorName)} · ${ago(p.createdAt)}</div></div></div>`}
+
+function gridHTML(list){return list.length?`<div class="grid">${list.map(cardHTML).join("")}</div>`:`<p style="color:var(--mut)">Aucun post pour l'instant.</p>`}
+
+function renderFeed(){
+  const tb=(k,l)=>`<button class="tab ${S.tab===k?"on":""}" onclick="A.tab('${k}')">${l}</button>`;
+  $("main").innerHTML=`<div class="tabs">${tb("foryou","Pour toi")}${tb("recent","Récents")}${tb("follow","Abonnements")}
+    ${S.tag?`<button class="tab on" onclick="A.filter(null)">#${esc(S.tag)} ✕</button>`:""}</div>${gridHTML(visible())}`;
+  afterGrid()}
+
+function afterGrid(){
+  const io=new IntersectionObserver(es=>es.forEach(e=>{if(!e.isIntersecting)return;io.unobserve(e.target);
+    const id=e.target.dataset.id;if(id&&once("i_"+id)){const p=S.posts.find(x=>x.id===id);
+      if(p&&p.authorId!==S.user.uid)updateDoc(doc(db,"posts",id),{impressions:increment(1)}).catch(()=>{})}}),{threshold:.6});
+  document.querySelectorAll(".card[data-id]").forEach(c=>io.observe(c));
+  const ad=document.querySelector(".ad");
+  if(ad&&!S.adLoaded){S.adLoaded=true;const s=document.createElement("script");s.src="https://pl32250031.profitableratecpmnetwork.com/f9/6c/6f/f96c6f084026a2c041c53df9ec4ac71d.js";ad.appendChild(s)}}
+
+async function renderProfile(){
+  const uid=S.view.uid;$("main").innerHTML="<p>Chargement…</p>";
+  const [u,ps]=await Promise.all([getDoc(doc(db,"users",uid)),getDocs(query(collection(db,"posts"),where("authorId","==",uid)))]);
+  if(!u.exists())return $("main").innerHTML="<p>Profil introuvable.</p>";
+  const d=u.data(),list=ps.docs.map(x=>({id:x.id,...x.data()})).sort((a,b)=>(b.createdAt?.toMillis?.()||0)-(a.createdAt?.toMillis?.()||0));
+  list.forEach(p=>{if(!S.posts.find(x=>x.id===p.id))S.posts.push(p)});
+  const own=uid===S.user.uid,fl=S.follows.has(uid);
+  $("main").innerHTML=`<div class="hd">${d.photo?`<img class="av" src="${esc(d.photo)}">`:`<span class="av"></span>`}
+    <div style="flex:1"><h2 style="margin:0">${esc(d.name)}</h2><div style="color:var(--mut)">${fmt(d.followers)} abonnés · ${list.length} posts</div></div>
+    ${own?"":`<button class="btn ${fl?"":"p"}" onclick="A.follow('${uid}')">${fl?"Abonné ✓":"S'abonner"}</button>`}</div>${gridHTML(list)}`;
+  afterGrid()}
+
+/* ---------- Actions ---------- */
+const A=window.A={
+  home(){S.view={t:"feed"};S.tag=null;loadFeed().then(render)},
+  tab(k){S.tab=k;renderFeed()},
+  filter(t){S.tag=t;S.view={t:"feed"};render();$("modal").innerHTML=""},
+  out(){signOut(auth)},
+  google(){signInWithPopup(auth,new GoogleAuthProvider()).catch(e=>$("err").textContent=e.message)},
+  async signup(){try{const n=$("nm").value.trim();if(n.length<2)throw new Error("Choisis un pseudo (2 caractères min.).");
+      const c=await createUserWithEmailAndPassword(auth,$("em").value,$("pw").value);await updateProfile(c.user,{displayName:n});S.user=auth.currentUser;render()}
+    catch(e){$("err").textContent=e.message}},
+  async login(){try{await signInWithEmailAndPassword(auth,$("em").value,$("pw").value)}catch(e){$("err").textContent=e.message}},
+  async accept(){
+    if(!$("ok").checked)return $("err").textContent="Tu dois accepter les conditions.";
+    const u=auth.currentUser,me={name:u.displayName||u.email.split("@")[0],photo:u.photoURL||"",followers:0,tagWeights:{},terms:true,termsAt:serverTimestamp()};
+    await setDoc(doc(db,"users",u.uid),me);S.me=me;await loadSocial();await loadFeed();render()},
+  profile(uid){S.view={t:"profile",uid};$("modal")&&($("modal").innerHTML="");renderProfile()},
+  compose(){$("modal").innerHTML=`<div class="modal"><div class="box"><h3 style="margin-top:0">Nouveau post</h3>
+    <textarea id="pt" rows="5" maxlength="2000" placeholder="Écris quelque chose… ajoute des #hashtags"></textarea>
+    <input id="pf" type="file" accept="image/*"><div class="err" id="err">Photos et texte uniquement.</div>
+    <button class="btn p" id="pb" onclick="A.publish()">Publier</button> <button class="btn" onclick="A.close()">Annuler</button></div></div>`},
+  close(){$("modal").innerHTML=""},
+  async publish(){
+    const text=$("pt").value.trim(),f=$("pf").files[0];
+    if(!text&&!f)return $("err").textContent="Ajoute du texte ou une photo.";
+    $("pb").disabled=true;$("err").textContent="Publication…";
+    try{const tags=[...new Set([...text.matchAll(TAG)].map(m=>m[1].toLowerCase()))].slice(0,10);
+      const img=f?await shrink(f,1000,.7):"",thumb=f?await shrink(f,420,.6):"";
+      await addDoc(collection(db,"posts"),{text,tags,img,thumb,authorId:S.user.uid,authorName:S.me.name,authorPhoto:S.me.photo||"",likes:0,comments:0,views:0,clicks:0,impressions:0,createdAt:serverTimestamp()});
+      boost(tags,2);await loadFeed();A.close();render()}
+    catch(e){$("err").textContent=e.message;$("pb").disabled=false}},
+  async open(id){
+    let p=S.posts.find(x=>x.id===id);if(!p)return;
+    if(p.authorId!==S.user.uid){
+      if(once("v_"+id)){p.views=(p.views||0)+1;updateDoc(doc(db,"posts",id),{views:increment(1)}).catch(()=>{});boost(p.tags,1)}
+      if(once("c_"+id)){p.clicks=(p.clicks||0)+1;updateDoc(doc(db,"posts",id),{clicks:increment(1)}).catch(()=>{})}}
+    A.drawPost(p);
+    const cs=await getDocs(query(collection(db,"posts",id,"comments"),orderBy("createdAt","asc"),limit(100)));
+    $("cms").innerHTML=cs.docs.map(d=>{const c=d.data();return `<div class="cm"><b>${esc(c.name)}</b> ${esc(c.text)}</div>`}).join("")||`<div style="color:var(--mut)">Sois le premier à commenter.</div>`},
+  drawPost(p){
+    $("modal").innerHTML=`<div class="modal" onclick="if(event.target===this)A.close()"><div class="box">
+      <div class="au" style="cursor:pointer" onclick="A.profile('${p.authorId}')">${p.authorPhoto?`<img class="av" src="${esc(p.authorPhoto)}">`:`<span class="av"></span>`}<b>${esc(p.authorName)}</b> · ${ago(p.createdAt)}</div>
+      ${p.img?`<img class="pimg" src="${p.img}">`:""}
+      <div class="txt">${esc(p.text).replace(/#([\p{L}\p{N}_]{2,30})/gu,(m,t)=>`<span class="tag" onclick="A.filter('${t.toLowerCase()}')">${m}</span>`)}</div>
+      <div class="meta"><button class="lk ${S.likes.has(p.id)?"on":""}" onclick="A.like('${p.id}')">♥ ${fmt(p.likes)}</button><span>💬 ${fmt(p.comments)}</span><span>👁 ${fmt(p.views)}</span>
+      ${p.authorId===S.user.uid?`<button class="lk" onclick="A.del('${p.id}')">🗑 Supprimer</button>`:""}</div>
+      <div id="cms" style="margin:10px 0"></div>
+      <input id="ct" maxlength="500" placeholder="Ajouter un commentaire…" onkeydown="if(event.key==='Enter')A.comment('${p.id}')">
+      <button class="btn sm" onclick="A.close()">Fermer</button></div></div>`},
+  async like(id){
+    const p=S.posts.find(x=>x.id===id),ref=doc(db,"likes",id+"_"+S.user.uid);
+    if(S.likes.has(id)){S.likes.delete(id);p.likes--;await deleteDoc(ref);updateDoc(doc(db,"posts",id),{likes:increment(-1)})}
+    else{S.likes.add(id);p.likes=(p.likes||0)+1;await setDoc(ref,{pid:id,uid:S.user.uid});updateDoc(doc(db,"posts",id),{likes:increment(1)});boost(p.tags,3)}
+    A.drawPost(p);A.open2(id)},
+  async open2(id){const cs=await getDocs(query(collection(db,"posts",id,"comments"),orderBy("createdAt","asc"),limit(100)));
+    $("cms").innerHTML=cs.docs.map(d=>{const c=d.data();return `<div class="cm"><b>${esc(c.name)}</b> ${esc(c.text)}</div>`}).join("")},
+  async comment(id){
+    const t=$("ct").value.trim();if(!t)return;const p=S.posts.find(x=>x.id===id);
+    await addDoc(collection(db,"posts",id,"comments"),{text:t,name:S.me.name,uid:S.user.uid,createdAt:serverTimestamp()});
+    updateDoc(doc(db,"posts",id),{comments:increment(1)});p.comments=(p.comments||0)+1;boost(p.tags,4);A.drawPost(p);A.open2(id)},
+  async del(id){if(!confirm("Supprimer ce post ?"))return;await deleteDoc(doc(db,"posts",id));S.posts=S.posts.filter(x=>x.id!==id);A.close();render()},
+  async follow(uid){
+    const ref=doc(db,"follows",S.user.uid+"_"+uid);
+    if(S.follows.has(uid)){S.follows.delete(uid);await deleteDoc(ref);updateDoc(doc(db,"users",uid),{followers:increment(-1)})}
+    else{S.follows.add(uid);await setDoc(ref,{from:S.user.uid,to:uid});updateDoc(doc(db,"users",uid),{followers:increment(1)})}
+    renderProfile()}
+};
+</script>
+</body>
+</html>
