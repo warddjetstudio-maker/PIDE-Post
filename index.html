@@ -615,7 +615,9 @@ const A=window.A={
     try{await setDoc(doc(db,"monet",S.user.uid),{email:v,uid:S.user.uid});await updateDoc(doc(db,"users",S.user.uid),{monet:true});S.me.monet=true;toast("Monétisation activée");A.loadMonet()}catch(e){alert(errMsg(e))}},
   async offMonet(){if(!confirm("Désactiver la monétisation ?"))return;
     try{await deleteDoc(doc(db,"monet",S.user.uid));await updateDoc(doc(db,"users",S.user.uid),{monet:false});S.me.monet=false;toast("Monétisation désactivée");A.loadMonet()}catch(e){alert(errMsg(e))}},
-  async claimMonet(){const m=S.mon;if(!m||m.avail<=0||m.reqs.some(r=>r.status==="pending"))return;if(!m.email)return alert("Enregistre d'abord ton email PayPal.");
+  async claimMonet(){const m=S.mon;if(!m||m.avail<=0||m.reqs.some(r=>r.status==="pending"))return;
+    if(m.followers<MON_FOL||m.views<MON_VIEWS)return alert("Tu n'as plus les "+MON_FOL+" abonnés et "+MON_VIEWS+" vues nécessaires.");
+    if(!m.email)return alert("Enregistre d'abord ton email PayPal.");
     if(!confirm("Réclamer "+eur(m.avail/100)+" sur "+m.email+" ?"))return;
     try{await addDoc(collection(db,"payouts"),{uid:S.user.uid,name:S.me.name,email:m.email,cents:m.avail,status:"pending",createdAt:serverTimestamp()});toast("Demande envoyée");A.loadMonet()}catch(e){alert(errMsg(e))}},
   async ppOff(){try{await updateDoc(doc(db,"users",S.user.uid),{paypal:""});S.me.paypal="";S.users[S.user.uid]=S.me;toast("PayPal déconnecté");render()}catch(e){alert(errMsg(e))}},
