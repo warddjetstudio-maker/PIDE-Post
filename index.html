@@ -404,6 +404,9 @@ function renderPost(){
   if(!S.cm[p.id])A.loadCm(p.id);
   observeAds(document.querySelectorAll("[data-ad]"))}
 
+function donSettings(){
+  const v=S.me.paypal||"",shown=v.includes("@")?v.replace(/^(.{2}).*(@.*)$/,"$1***$2"):"paypal.me/"+v;
+  return `<div class="sc"><h3>Dons</h3>${v?`<div class="sr"><span>✅ PayPal connecté (${esc(shown)}) : le bouton « 💝 Faire un don » est actif sous tes posts et tes lives.</span><span><button class="btn" onclick="A.donTest()">Tester</button> <button class="btn" onclick="A.ppOff()">Déconnecter</button></span></div>`:`<div class="sub" style="margin-bottom:6px">Connecte ton PayPal pour activer le bouton « 💝 Faire un don » sous tes posts et tes lives. Entre ton PayPal.me (conseillé) ou ton email PayPal. Sans ça, aucun bouton. Visible publiquement.</div><input id="spp" placeholder="paypal.me/tonpseudo ou email PayPal"><button class="pri" onclick="A.saveDon()">Connecter mon PayPal</button>`}</div>`}
 function renderSettings(){
   const s=S.me.settings||{},u=auth.currentUser,uid=S.user.uid,top=Object.entries(S.me.tagWeights||{}).sort((a,b)=>b[1]-a[1]).slice(0,10),h=S.me.bannerHue??hue(uid);
   const sw=(k,l,on)=>`<div class="sr"><span>${l}</span><input type="checkbox" style="width:auto" ${on?"checked":""} onchange="A.pref('${k}',this.checked)"></div>`;
@@ -417,7 +420,7 @@ function renderSettings(){
    <div class="sr"><span>Couleur d'accent</span><span>${ac.map(c=>`<span class="dot ${(s.accent||ac[0])===c?"on":""}" style="background:${c}" onclick="A.pref('accent','${c}')"></span>`).join(" ")}</span></div></div>
   <div class="sc"><h3>Confidentialité</h3>${sw("comments","Autoriser les commentaires sur mes posts",s.comments!==false)}${sw("showFollowers","Afficher mon nombre d'abonnés",s.showFollowers!==false)}</div>
   <div class="sc"><h3>Recommandations</h3><div class="sub">Tes centres d'intérêt appris :</div><div class="meta">${top.length?top.map(t=>`<span class="mc">#${esc(t[0])}</span>`).join(""):`<span class="sub">Rien encore : like et commente des posts.</span>`}</div><button class="btn" onclick="A.resetReco()">Réinitialiser mes recommandations</button></div>
-  <div class="sc"><h3>Dons</h3><div class="sub">Optionnel : ton PayPal.me (ex. paypal.me/tonpseudo, conseillé) ou ton email PayPal. Rempli : un bouton « 💝 Faire un don » apparaît sous tes posts et tes lives. Vide : aucun bouton. Ce champ est visible publiquement.</div><input id="spp" placeholder="paypal.me/tonpseudo" value="${esc(S.me.paypal||"")}"><button class="pri" onclick="A.saveDon()">Enregistrer</button></div>
+  ${donSettings()}
   <div class="sc"><h3>Mes publicités</h3><div id="myads"><span class="sub">Chargement…</span></div><button class="pri" style="margin-top:12px" onclick="A.adModal()">📢 Mettre une pub</button></div>
   <div class="sc"><h3>Compte</h3><div class="sr"><span>Email</span><span class="sub">${esc(u.email||"Compte Google")}</span></div>
    <div class="sr"><span>Mot de passe</span><button class="btn" onclick="A.resetPw()">Envoyer un email de réinitialisation</button></div>
@@ -558,6 +561,8 @@ const A=window.A={
   swipe(){history.replaceState(null,"",location.pathname);S.tab="foryou";S.cat="Tout";S.tag=null;S.q="";S.view={t:"swipe"};
     const go=()=>{render();scrollTo(0,0)};loadFeed().then(go).catch(go)},
   snap(d){const sw=$("sw");if(sw)sw.scrollBy({top:d*sw.clientHeight,behavior:"smooth"})},
+  async ppOff(){try{await updateDoc(doc(db,"users",S.user.uid),{paypal:""});S.me.paypal="";S.users[S.user.uid]=S.me;toast("PayPal déconnecté");render()}catch(e){alert(errMsg(e))}},
+  donTest(){const u=donURL(S.user.uid,1);if(u)window.open(u,"_blank","noopener,noreferrer")},
   async saveDon(){let v=$("spp").value.trim().replace(/^https?:\/\//i,"").replace(/^(www\.)?paypal\.me\//i,"").replace(/^(www\.)?paypal\.com\/paypalme\//i,"").replace(/[\/?#].*$/,"");
     if(v&&!MAILRE.test(v)&&!USERRE.test(v))return alert("PayPal invalide : mets ton PayPal.me ou ton email.");
     try{await updateDoc(doc(db,"users",S.user.uid),{paypal:v});S.me.paypal=v;S.users[S.user.uid]=S.me;toast(v?"PayPal enregistré":"Bouton de don désactivé");render()}catch(e){alert(errMsg(e))}},
