@@ -129,6 +129,7 @@ body.light{--bg:#f3f3fa;--sf:#fff;--sf2:#e4e4f0;--tx:#15151f;--mu:#62627a}
 .adbtn{color:var(--c2);font-weight:700}
 .stage.v{width:min(100%,calc(80vh*9/16));aspect-ratio:9/16;margin:0 auto}
 #inter img{width:100%;max-height:60vh;object-fit:contain;display:block}
+.sl .vcol{width:min(100%,calc((100dvh - 56px)*9/16))}
 .vfs{position:fixed;inset:0;z-index:30;background:#000;color:#fff}
 .vcol{position:absolute;top:0;bottom:0;left:50%;transform:translateX(-50%);width:min(100vw,calc(100dvh*9/16));overflow:hidden;background:#000}
 .vcol{display:flex;flex-direction:column}
@@ -342,7 +343,7 @@ function termsHTML(){return `<div class="auth"><div class="logo" style="font-siz
   <button class="pri" onclick="A.accept()">Accepter et continuer</button> <button class="btn" onclick="A.out()">Refuser</button></div>`}
 
 function render(){
-  const a=$("app");if(L&&!L.host&&S.view.t!=="live")leaveLive();
+  const a=$("app");if(L&&!L.host&&S.view.t!=="live"&&S.view.t!=="lswipe")leaveLive();
   if(!S.user)return a.innerHTML=authHTML();
   if(S.boot)return a.innerHTML=`<div class="auth"><div class="logo" style="font-size:30px">Oups</div><p class="err">${esc(S.boot)}</p><button class="pri" onclick="boot(auth.currentUser)">Réessayer</button> <button class="btn" onclick="A.out()">Se déconnecter</button></div>`;
   if(!S.me)return a.innerHTML=termsHTML();
@@ -468,7 +469,7 @@ function applyLives(){
   const sig=JSON.stringify(Object.entries(v).map(([k,x])=>[k,x.n||0,x.title]));S.lives=v;
   if(sig!==S.lsig){S.lsig=sig;if(S.me&&S.view.t==="feed")renderFeed()}
   const sig2=JSON.stringify(Object.entries(v).filter(([k,x])=>x.vert).map(([k,x])=>[k,x.title]));
-  if(sig2!==S.lsig2){S.lsig2=sig2;if(S.me&&S.view.t==="lswipe")renderLiveSwipe()}}
+  if(sig2!==S.lsig2){S.lsig2=sig2;if(S.me&&S.view.t==="lswipe"&&!L&&!$("sw")?.dataset.lock)renderLiveSwipe()}}
 function watchLives(){if(S.lw)return;S.lw=1;
   onSnapshot(query(collection(db,"posts"),where("liveOn","==",true)),sn=>{S.liveRaw={};sn.docs.forEach(d=>S.liveRaw[d.id]=d.data());applyLives()},e=>console.warn("lives",e));
   setInterval(applyLives,15000)}
@@ -513,20 +514,23 @@ function listenLive(id){
 /* --- côté spectateur --- */
 async function joinLive(id){
   const l=S.lives[id];if(!l)return;
-  if(L&&L.id===id){S.view={t:"live",id};return render()}
+  const sw=S.view.t==="lswipe",warn=m=>sw?toast(m):alert(m);
+  if(L&&L.id===id){if(sw)return;S.view={t:"live",id};return render()}
   if(l.hostId===S.user.uid)return;
-  if((l.n||0)>=MAX_VIEWERS)return alert("Ce live est complet ("+MAX_VIEWERS+" spectateurs max).");
-  if(L?.host)return alert("Termine d'abord ton propre live.");
+  if((l.n||0)>=MAX_VIEWERS)return warn("Ce live est complet ("+MAX_VIEWERS+" spectateurs max).");
+  if(L?.host)return warn("Termine d'abord ton propre live.");
   if(L)leaveLive();S.liveSeen=true;
   const uid=S.user.uid,pc=new RTCPeerConnection(ICE),au=new Audio();au.autoplay=true;
   L={id,host:false,un:[],msgs:[],t0:Date.now(),info:l,pc,audio:au};
-  S.view={t:"live",id};render();listenLive(id);
+  if(sw){const el=document.querySelector('.sl[data-live="'+id+'"]');if(!el){leaveLive();return}el.classList.add("on");el.innerHTML=liveVHTML(l,false,S.follows.has(l.hostId),true);liveVInit()}
+  else{S.view={t:"live",id};render()}
+  listenLive(id);
   pc.ontrack=e=>{if(!L)return;if(e.track.kind==="audio"){au.srcObject=e.streams[0];au.play().catch(()=>{})}else{(L.rs=L.rs||{})[e.streams[0].id]=e.streams[0];drawVideo()}};
-  try{await updateDoc(lref(id),{["rtc."+uid]:{j:Date.now()}})}catch(e){toast("Connexion au live impossible");leaveLive();S.view={t:"feed"};return render()}
+  try{await updateDoc(lref(id),{["rtc."+uid]:{j:Date.now()}})}catch(e){toast("Connexion au live impossible");return liveGone()}
   if(!L||L.id!==id)return;
   L.un.push(onSnapshot(lref(id),async sn=>{
     if(!L||L.id!==id)return;
-    if(!sn.exists()||!sn.data().liveOn){toast("Le live est terminé");leaveLive();S.view={t:"feed"};return render()}
+    if(!sn.exists()||!sn.data().liveOn){toast("Le live est terminé");return liveGone()}
     const d=sn.data();L.info={...d,hostId:d.authorId,hostName:d.authorName};L.poll=d.lpoll||null;L.votes=d.lvotes||{};drawMic();drawVideo();drawPoll();
     const o=d.rtc?.[uid]?.o;
     if(o&&o.rev!==pc._rev){pc._rev=o.rev;
@@ -583,26 +587,44 @@ function renderLive(){
   (L.msgs||[]).forEach(addMsg);drawVideo();drawPoll();drawImg();drawMic()}
 
 /* ---------- Live vertical : plein écran, format portrait ---------- */
-function renderLiveV(l,host,fl){
+function liveVHTML(l,host,fl,emb){
   const side=host
    ?`<button class="vb" id="bcam" onclick="A.toggleCam()">📷</button><button class="vb" id="bscr" onclick="A.toggleScr()">🖥</button><button class="vb" title="Affichage" onclick="A.cycLayout()">🔀</button><button class="vb" onclick="A.mic()">🎙️</button><button class="vb" onclick="A.livePoll()">📊</button><label class="vb">🖼<input type="file" accept="image/*" hidden onchange="A.liveImg(this)"></label><button class="vb" onclick="A.rmImg()">🚫</button>`
    :`${["❤️","🔥","😂","👏","😮"].map(e=>`<button class="vb" onclick="A.react('${e}')">${e}</button>`).join("")}<button class="vb" onclick="A.sound()">🔊</button><button class="vb ${fl?"on":""}" onclick="A.follow('${l.hostId}')">${fl?"✓":"➕"}</button>${donInfo(l.hostId)?`<button class="vb" onclick="A.donate('${esc(l.hostId)}')">💝</button>`:""}`;
-  $("ct").innerHTML=`<div class="vfs"><div class="vcol">
-   <div class="vup"><div class="vtop"><span class="onair">🔴 EN DIRECT</span><span class="mst" id="mic"></span><span class="mst" id="ln"></span><span style="flex:1"></span>${host?`<button class="dg" onclick="A.endLive()">Terminer</button>`:`<button class="vb" title="Défilement live" onclick="A.lswipe()">📺</button><button class="vb" onclick="A.home()">✕</button>`}</div>
+  const inner=`<div class="vcol">
+   <div class="vup"><div class="vtop"><span class="onair">🔴 EN DIRECT</span><span class="mst" id="mic"></span><span class="mst" id="ln"></span><span style="flex:1"></span>${host?`<button class="dg" onclick="A.endLive()">Terminer</button>`:`${emb?"":`<button class="vb" title="Défilement live" onclick="A.lswipe()">📺</button>`}<button class="vb" onclick="A.home()">✕</button>`}</div>
    <div class="vinfo">${av(l.hostId,36)}<div><b>${esc(nm(l.hostId,l.hostName))}</b><div style="font-size:13px">${esc(l.title)}</div></div></div><div class="vpoll" id="lpoll"></div></div>
    <div class="stage vf" id="stage"><div id="agv" style="position:absolute;inset:0;z-index:0"></div></div>
-   <div class="vdn"><div class="msgs" id="lchat"></div><div class="vside">${side}</div><input id="lmsg" maxlength="200" placeholder="Écris un message…" onkeydown="if(event.key==='Enter')A.say()"></div></div></div>`;
-  (L.msgs||[]).forEach(addMsg);drawVideo();drawPoll();drawImg();drawMic()}
+   <div class="vdn"><div class="msgs" id="lchat"></div><div class="vside">${side}</div><input id="lmsg" maxlength="200" placeholder="Écris un message…" onkeydown="if(event.key==='Enter')A.say()"></div></div>`;
+  return emb?inner:`<div class="vfs">${inner}</div>`}
+const liveVInit=()=>{(L.msgs||[]).forEach(addMsg);drawVideo();drawPoll();drawImg();drawMic()};
+function renderLiveV(l,host,fl){$("ct").innerHTML=liveVHTML(l,host,fl,false);liveVInit()}
 
 /* ---------- Défilement live, pub de transition, autres lives ---------- */
 function goSwipe(tab,keep){history.replaceState(null,"",location.pathname);S.tab=tab||"foryou";if(!keep){S.cat="Tout";S.tag=null;S.q=""}S.view={t:"swipe"};
   const go=()=>{render();scrollTo(0,0)};loadFeed().then(go).catch(go)}
-const liveSlide=(id,l)=>`<section class="sl"><div class="sbgc" style="background:linear-gradient(135deg,#ff2b5c,#7a1fff)"></div><div class="sin"><div class="smd" style="flex-direction:column;text-align:center;gap:14px"><span class="bd l" style="position:static;background:#ff2b5c">🔴 EN DIRECT</span><div style="font-size:26px;font-weight:800">${esc(l.title)}</div><div>${av(l.hostId,64)}</div><b>${esc(nm(l.hostId,l.hostName))}</b><div>👁 ${l.n||0} spectateur${l.n>1?"s":""}</div><button class="pri" style="padding:14px 26px;font-size:17px" onclick="A.joinLive('${esc(id)}')">▶ Regarder</button></div></div></section>`;
+const liveSlideIn=(id,l)=>`<div class="sbgc" style="background:linear-gradient(135deg,#ff2b5c,#7a1fff)"></div><div class="sin"><div class="smd" style="flex-direction:column;text-align:center;gap:14px"><span class="bd l" style="position:static;background:#ff2b5c">🔴 EN DIRECT</span><div style="font-size:26px;font-weight:800">${esc(l.title)}</div><div>${av(l.hostId,64)}</div><b>${esc(nm(l.hostId,l.hostName))}</b><div>${l.hostId===S.user.uid?"C'est ton live":"Connexion…"}</div></div></div>`;
+const liveSlide=(id,l)=>`<section class="sl" data-live="${esc(id)}">${liveSlideIn(id,l)}</section>`;
 function renderLiveSwipe(){
+  if(L&&!L.host)leaveLive();
   const lv=Object.entries(S.lives).filter(([id,x])=>x.vert).sort((x,y)=>(y[1].n||0)-(x[1].n||0)),pk=adPicker();let h="";
   lv.forEach(([id,l],i)=>{h+=liveSlide(id,l);if((i+1)%3===0||(i===lv.length-1&&lv.length<3))h+=adSlide(pk())});
   $("ct").innerHTML=`<div class="sw" id="sw">${h||`<div class="empty">Aucun live vertical en ce moment.<br><button class="pri" onclick="A.liveModal()">🔴 Lancer un live</button></div>`}</div><div class="snav"><button onclick="A.snap(-1)">▲</button><button onclick="A.snap(1)">▼</button></div>`;
-  const sw=$("sw");fitSwipe();observeAds(sw.querySelectorAll(".sl[data-ad]"),sw)}
+  const sw=$("sw");fitSwipe();observeAds(sw.querySelectorAll(".sl[data-ad]"),sw);swWatch(sw)}
+/* le live affiché se lance tout seul ; une pub bloque le défilement 5 secondes */
+function swWatch(sw){let tm;const act=()=>{const el=sw.children[Math.round(sw.scrollTop/sw.clientHeight)];if(!el||!el.dataset||sw._cur===el)return;sw._cur=el;swActivate(el,sw)};
+  sw.addEventListener("scroll",()=>{clearTimeout(tm);tm=setTimeout(act,80)});setTimeout(act,60)}
+function swActivate(el,sw){if(el.dataset.ad){swClear();swLock(el,sw)}else if(el.dataset.live)swPlay(el)}
+function swClear(){if(L&&!L.host)leaveLive();
+  document.querySelectorAll(".sl[data-live].on").forEach(e=>{e.classList.remove("on");const l=S.lives[e.dataset.live];if(l)e.innerHTML=liveSlideIn(e.dataset.live,l)})}
+function swPlay(el){const id=el.dataset.live;if(L&&L.id===id)return;swClear();joinLive(id)}
+function swLock(el,sw){if(el.dataset.done)return;el.dataset.done=1;sw.dataset.lock=1;sw.style.overflowY="hidden";
+  const b=document.createElement("button");b.className="btn";b.disabled=true;b.style.cssText="position:absolute;right:12px;top:12px;z-index:6";b.textContent="Suite dans 5 s";el.appendChild(b);
+  let n=5;const t=setInterval(()=>{n--;if(!document.body.contains(el))return clearInterval(t);
+    if(n>0)b.textContent="Suite dans "+n+" s";else{clearInterval(t);b.disabled=false;b.textContent="▼ Continuer";b.onclick=()=>A.snap(1);delete sw.dataset.lock;sw.style.overflowY="auto"}},1000)}
+function swUI(){const el=document.querySelector(".sl[data-live].on");if(!el||!L)return;const l=S.lives[L.id]||L.info;el.innerHTML=liveVHTML(l,false,S.follows.has(l.hostId),true);liveVInit()}
+function liveGone(){leaveLive();if(S.view.t==="lswipe")return renderLiveSwipe();S.view={t:"feed"};render()}
+const rr=()=>S.view.t==="lswipe"?swUI():render();
 function adInter(next){if($("inter"))return;
   const a=adPicker()();if(!a){next();return}
   const el=document.createElement("div");el.id="inter";el.style.cssText="position:fixed;inset:0;z-index:100;background:#000d;display:flex;align-items:center;justify-content:center;padding:16px";
@@ -618,10 +640,10 @@ const A=window.A={
   go(t){t&&t!=="foryou"&&t!=="home"?goSwipe(t):A.home()},
   home(){history.replaceState(null,"",location.pathname);S.view={t:"feed"};S.q="";S.tag=null;S.cat="Tout";loadFeed().then(render).catch(render)},
   nv(k){k==="home"?A.home():k==="lswipe"?A.lswipe():goSwipe(k)},
-  lswipe(){history.replaceState(null,"",location.pathname);S.view={t:"lswipe"};render();scrollTo(0,0)},
+  lswipe(){if(L&&!L.host)leaveLive();history.replaceState(null,"",location.pathname);S.view={t:"lswipe"};render();scrollTo(0,0)},
   cat(c){S.cat=c;renderFeed()},
   swipe(tab){goSwipe(tab)},
-  snap(d){const sw=$("sw");if(sw)sw.scrollBy({top:d*sw.clientHeight,behavior:"smooth"})},
+  snap(d){const sw=$("sw");if(sw&&!sw.dataset.lock)sw.scrollBy({top:d*sw.clientHeight,behavior:"smooth"})},
   async ppOff(){try{await updateDoc(doc(db,"users",S.user.uid),{paypal:""});S.me.paypal="";S.users[S.user.uid]=S.me;toast("PayPal déconnecté");render()}catch(e){alert(errMsg(e))}},
   donTest(){const u=donURL(S.user.uid,1);if(u)window.open(u,"_blank","noopener,noreferrer")},
   async saveDon(){let v=$("spp").value.trim().replace(/^https?:\/\//i,"").replace(/^(www\.)?paypal\.me\//i,"").replace(/^(www\.)?paypal\.com\/paypalme\//i,"").replace(/[\/?#].*$/,"");
@@ -750,8 +772,8 @@ const A=window.A={
     try{await deleteDoc(doc(db,"posts",id));S.posts=S.posts.filter(x=>x.id!==id);S.view={t:"feed"};render()}catch(e){alert(errMsg(e))}},
   async follow(uid){
     const ref=doc(db,"follows",S.user.uid+"_"+uid),u=S.users[uid]||{};
-    try{if(S.follows.has(uid)){S.follows.delete(uid);u.followers=Math.max(0,(u.followers||0)-1);render();await deleteDoc(ref);updateDoc(doc(db,"users",uid),{followers:increment(-1)})}
-    else{S.follows.add(uid);u.followers=(u.followers||0)+1;render();await setDoc(ref,{from:S.user.uid,to:uid});updateDoc(doc(db,"users",uid),{followers:increment(1)});notify(uid,"follow")}}catch(e){alert(errMsg(e))}},
+    try{if(S.follows.has(uid)){S.follows.delete(uid);u.followers=Math.max(0,(u.followers||0)-1);rr();await deleteDoc(ref);updateDoc(doc(db,"users",uid),{followers:increment(-1)})}
+    else{S.follows.add(uid);u.followers=(u.followers||0)+1;rr();await setDoc(ref,{from:S.user.uid,to:uid});updateDoc(doc(db,"users",uid),{followers:increment(1)});notify(uid,"follow")}}catch(e){alert(errMsg(e))}},
   settings(){S.view={t:"settings"};render();scrollTo(0,0)},
   notifs(){S.view={t:"notifs"};render();S.notifs.filter(n=>!n.read).forEach(n=>{n.read=true;updateDoc(doc(db,"notifs",n.id),{read:true}).catch(()=>{})})},
   save(id){const a=S.me.saved||[],on=a.includes(id);S.me.saved=on?a.filter(x=>x!==id):[...a,id];
