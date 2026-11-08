@@ -572,8 +572,8 @@ function renderLive(){
 function goSwipe(tab,keep){history.replaceState(null,"",location.pathname);S.tab=tab||"foryou";if(!keep){S.cat="Tout";S.tag=null;S.q=""}S.view={t:"swipe"};
   const go=()=>{render();scrollTo(0,0)};loadFeed().then(go).catch(go)}
 /* ---------- Monétisation : par pub payante passée avant un live = (2 € TTC − TVA 20 %) / 100 vues / 2 (partage 50/50) ≈ 0,83 centime ---------- */
-async const CREDIT_LIVE=Math.round(AD_RATE*100/1.2/100/2*10000)/10000; // 2 € = 200 centimes TTC ; /1.2 (TVA) ; /100 (par vue) ; /2 (partage) = 0,8333 centime
-function creditLive(a,hostId){
+const CREDIT_LIVE=Math.round(AD_RATE*100/1.2/100/2*10000)/10000; // 2 € = 200 centimes TTC ; /1.2 (TVA) ; /100 (par vue) ; /2 (partage) = 0,8333 centime
+async function creditLive(a,hostId){
   if(!a||!hostId||hostId===S.user.uid||a.authorId===S.user.uid)return;
   if(a.promo===true||!((+a.paid)>0))return; // pub gratuite (code de réduction) : aucun gain
   const b=Math.floor(Date.now()/6e5),k="pp_cr_"+hostId+"_"+b;if(sessionStorage[k])return;
