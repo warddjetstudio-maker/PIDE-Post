@@ -131,19 +131,19 @@ body.light{--bg:#f3f3fa;--sf:#fff;--sf2:#e4e4f0;--tx:#15151f;--mu:#62627a}
 #inter img{width:100%;max-height:60vh;object-fit:contain;display:block}
 .vfs{position:fixed;inset:0;z-index:30;background:#000;color:#fff}
 .vcol{position:absolute;top:0;bottom:0;left:50%;transform:translateX(-50%);width:min(100vw,calc(100dvh*9/16));overflow:hidden;background:#000}
-.stage.vf{position:absolute;inset:0;width:100%;aspect-ratio:auto;border-radius:0;margin:0}
-.vtop{position:absolute;top:0;left:0;right:0;z-index:5;display:flex;gap:8px;align-items:center;padding:12px;background:linear-gradient(#000a,transparent)}
+.vcol{display:flex;flex-direction:column}
+.stage.vf{position:relative;flex:none;width:100%;aspect-ratio:16/9;border-radius:0;margin:0}
+.vup{flex:1;min-height:0;overflow:auto}
+.vtop{display:flex;gap:8px;align-items:center;padding:12px}
 .vtop .onair,.vtop .mst{position:static}
-.vinfo{position:absolute;top:58px;left:12px;z-index:5;display:flex;gap:8px;align-items:center;text-shadow:0 1px 6px #000;max-width:62%}
-.vside{position:absolute;right:8px;bottom:76px;z-index:5;display:flex;flex-direction:column;gap:10px;align-items:center}
-.vb{width:44px;height:44px;border-radius:50%;border:0;background:#0009;color:#fff;font-size:20px;cursor:pointer;display:flex;align-items:center;justify-content:center;padding:0}
-.vb.on{background:var(--c1);color:#000}
-.vchat{position:absolute;left:0;right:64px;bottom:0;z-index:5;padding:30px 12px 12px;background:linear-gradient(transparent,#000b)}
-.vchat .msgs{max-height:26vh;overflow:auto}
-.vchat .msg{text-shadow:0 1px 4px #000;margin:4px 0;font-size:13px}
-.vchat input{background:#0009;border-color:#fff3;color:#fff;margin:6px 0 0;border-radius:22px}
-.vpoll{position:absolute;left:12px;right:68px;top:104px;z-index:5}
-.vpoll .poll{background:#000b;color:#fff}
+.vinfo{display:flex;gap:8px;align-items:center;padding:0 12px 8px}
+.vpoll{padding:0 12px}.vpoll .poll{background:#1a1a26;color:#fff}
+.vdn{flex:1;min-height:0;display:flex;flex-direction:column;padding:8px 12px 12px}
+.vdn .msgs{flex:1;min-height:0;overflow:auto}
+.vdn .msg{margin:4px 0;font-size:13px}
+.vb{width:40px;height:40px}
+.vside{display:flex;gap:8px;flex-wrap:wrap;justify-content:center;margin:8px 0}
+.vdn input{background:#1a1a26;border-color:#fff3;color:#fff;margin:0;border-radius:22px}
 #inter .tc{width:100%;min-height:220px;display:flex}
 </style>
 </head>
@@ -587,11 +587,11 @@ function renderLiveV(l,host,fl){
   const side=host
    ?`<button class="vb" id="bcam" onclick="A.toggleCam()">📷</button><button class="vb" id="bscr" onclick="A.toggleScr()">🖥</button><button class="vb" title="Affichage" onclick="A.cycLayout()">🔀</button><button class="vb" onclick="A.mic()">🎙️</button><button class="vb" onclick="A.livePoll()">📊</button><label class="vb">🖼<input type="file" accept="image/*" hidden onchange="A.liveImg(this)"></label><button class="vb" onclick="A.rmImg()">🚫</button>`
    :`${["❤️","🔥","😂","👏","😮"].map(e=>`<button class="vb" onclick="A.react('${e}')">${e}</button>`).join("")}<button class="vb" onclick="A.sound()">🔊</button><button class="vb ${fl?"on":""}" onclick="A.follow('${l.hostId}')">${fl?"✓":"➕"}</button>${donInfo(l.hostId)?`<button class="vb" onclick="A.donate('${esc(l.hostId)}')">💝</button>`:""}`;
-  $("ct").innerHTML=`<div class="vfs"><div class="vcol"><div class="stage vf" id="stage"><div id="agv" style="position:absolute;inset:0;z-index:0"></div></div>
-   <div class="vtop"><span class="onair">🔴 EN DIRECT</span><span class="mst" id="mic"></span><span class="mst" id="ln"></span><span style="flex:1"></span>${host?`<button class="dg" onclick="A.endLive()">Terminer</button>`:`<button class="vb" title="Défilement live" onclick="A.lswipe()">📺</button><button class="vb" onclick="A.home()">✕</button>`}</div>
-   <div class="vinfo">${av(l.hostId,36)}<div><b>${esc(nm(l.hostId,l.hostName))}</b><div style="font-size:13px">${esc(l.title)}</div></div></div>
-   <div class="vpoll" id="lpoll"></div><div class="vside">${side}</div>
-   <div class="vchat"><div class="msgs" id="lchat"></div><input id="lmsg" maxlength="200" placeholder="Écris un message…" onkeydown="if(event.key==='Enter')A.say()"></div></div></div>`;
+  $("ct").innerHTML=`<div class="vfs"><div class="vcol">
+   <div class="vup"><div class="vtop"><span class="onair">🔴 EN DIRECT</span><span class="mst" id="mic"></span><span class="mst" id="ln"></span><span style="flex:1"></span>${host?`<button class="dg" onclick="A.endLive()">Terminer</button>`:`<button class="vb" title="Défilement live" onclick="A.lswipe()">📺</button><button class="vb" onclick="A.home()">✕</button>`}</div>
+   <div class="vinfo">${av(l.hostId,36)}<div><b>${esc(nm(l.hostId,l.hostName))}</b><div style="font-size:13px">${esc(l.title)}</div></div></div><div class="vpoll" id="lpoll"></div></div>
+   <div class="stage vf" id="stage"><div id="agv" style="position:absolute;inset:0;z-index:0"></div></div>
+   <div class="vdn"><div class="msgs" id="lchat"></div><div class="vside">${side}</div><input id="lmsg" maxlength="200" placeholder="Écris un message…" onkeydown="if(event.key==='Enter')A.say()"></div></div></div>`;
   (L.msgs||[]).forEach(addMsg);drawVideo();drawPoll();drawImg();drawMic()}
 
 /* ---------- Défilement live, pub de transition, autres lives ---------- */
