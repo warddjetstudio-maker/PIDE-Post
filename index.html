@@ -294,7 +294,7 @@ function renderSwipe(){
 const MAILRE=/^[^\s@]+@[^\s@]+\.[^\s@]+$/,USERRE=/^[A-Za-z0-9._-]{1,40}$/;
 const donInfo=uid=>{const v=String(S.users[uid]?.paypal||"").trim();if(!v)return null;if(MAILRE.test(v))return{t:"e",v};if(USERRE.test(v))return{t:"m",v};return null};
 const donURL=(uid,n)=>{const d=donInfo(uid);n=Math.round(+n*100)/100;if(!d||!(n>=1&&n<=5000))return"";
-  return d.t==="e"?`https://www.paypal.com/donate/?business=${encodeURIComponent(d.v)}&amount=${n}&currency_code=EUR`:`https://www.paypal.com/paypalme/${encodeURIComponent(d.v)}/${n}EUR`};
+  return d.t==="e"?`https://www.paypal.com/cgi-bin/webscr?cmd=_xclick&business=${encodeURIComponent(d.v)}&item_name=${encodeURIComponent("Soutien à "+nm(uid)+" sur PIDE Post")}&amount=${n}&currency_code=EUR&no_shipping=1`:`https://www.paypal.com/paypalme/${encodeURIComponent(d.v)}/${n}EUR`};
 const donBtn=uid=>donInfo(uid)&&uid!==S.user.uid?`<button class="btn" style="background:#ffcc00;color:#000" onclick="A.donate('${esc(uid)}')">💝 Faire un don</button>`:"";
 
 /* ---------- Écrans ---------- */
