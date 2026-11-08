@@ -579,15 +579,18 @@ async function creditLive(a,hostId){
   if(!u.monet)return; // le streamer n'a pas renseigné son email PayPal
   sessionStorage[k]=1;
   setDoc(doc(db,"earnings",S.user.uid+"_"+hostId+"_"+b),{to:hostId,from:S.user.uid,adId:a.id,cents:1,createdAt:serverTimestamp()}).catch(()=>{})}
-const MON_FOL=5,MON_VIEWS=100; // seuils pour débloquer la monétisation
 function drawMonet(){const el=$("monet"),m=S.mon;if(!el||!m)return;
-  const ok=m.followers>=MON_FOL&&m.views>=MON_VIEWS,on=!!S.me.monet,pend=m.reqs.some(r=>r.status==="pending"),b=(v,t)=>Math.min(v,t)+" / "+t,
+  const ok=!!S.me.monetOk,on=!!S.me.monet,pend=m.reqs.some(r=>r.status==="pending"),ar=m.access,
     st={pending:"⏳ En attente",paid:"✅ Payé",refused:"❌ Refusé"};
-  el.innerHTML=`<h3>💰 Monétisation</h3><div class="sub" style="margin-bottom:8px">Gagne 1 centime à chaque pub payante diffusée avant ton live (les pubs gratuites avec code de réduction ne comptent pas). Pour la débloquer : ${MON_FOL} abonnés et ${MON_VIEWS} vues sur tes posts et tes lives.</div>
-  <div class="sr"><span>Abonnés</span><b>${b(m.followers,MON_FOL)}</b></div><div class="sr"><span>Vues (posts + lives)</span><b>${b(m.views,MON_VIEWS)}</b></div>
-  ${ok?`<input id="smn" type="email" placeholder="Ton email PayPal" value="${esc(m.email)}"><button class="pri" onclick="A.saveMonet()">${on?"Mettre à jour l'email":"Activer la monétisation"}</button>`:`<div class="sub" style="margin-top:8px">🔒 Pas encore débloquée.</div>`}
-  ${on?`<div class="sr"><span>Gains disponibles</span><b>${eur(m.avail/100)}</b></div><div class="sub">Total généré : ${eur(m.earned/100)}</div><div style="margin-top:8px"><button class="pri" ${m.avail>0&&!pend?"":"disabled"} onclick="A.claimMonet()">${pend?"Demande en cours…":"Réclamer mes gains"}</button> <button class="btn" onclick="A.offMonet()">Désactiver</button></div>`:""}
-  ${m.reqs.length?`<h4 style="margin:14px 0 4px">Mes demandes</h4>`+m.reqs.map(r=>`<div class="sr"><span>${eur((r.cents||0)/100)} · ${st[r.status]||esc(r.status)}${r.msg?`<div class="sub">${esc(r.msg)}</div>`:""}</span><span class="sub">${ago(r.createdAt)}</span></div>`).join(""):""}`}
+  let acc;
+  if(ok)acc=`<div class="sub" style="margin-top:8px">✅ Accès à la monétisation accepté.</div><input id="smn" type="email" placeholder="Ton email PayPal" value="${esc(m.email)}"><button class="pri" onclick="A.saveMonet()">${on?"Mettre à jour l'email":"Activer la monétisation"}</button>`;
+  else if(ar?.status==="pending")acc=`<div class="sub" style="margin-top:8px">⏳ Demande envoyée, en attente de validation.</div>`;
+  else acc=`${ar?.status==="refused"?`<div class="err" style="min-height:0;margin-top:8px">❌ Demande refusée${ar.msg?" : "+esc(ar.msg):""}</div>`:""}<button class="pri" style="margin-top:8px" onclick="A.askMonet()">${ar?"Refaire une demande":"Demander l'accès à la monétisation"}</button>`;
+  el.innerHTML=`<h3>💰 Monétisation</h3><div class="sub" style="margin-bottom:8px">Gagne 1 centime à chaque pub payante diffusée avant ton live (les pubs gratuites avec code de réduction ne comptent pas). Pour la débloquer, fais une demande : elle est validée à la main.</div>
+  <div class="sr"><span>Abonnés</span><b>${fmt(m.followers)}</b></div><div class="sr"><span>Vues (posts + lives)</span><b>${fmt(m.views)}</b></div>
+  ${acc}
+  ${ok&&on?`<div class="sr"><span>Gains disponibles</span><b>${eur(m.avail/100)}</b></div><div class="sub">Total généré : ${eur(m.earned/100)}</div><div style="margin-top:8px"><button class="pri" ${m.avail>0&&!pend?"":"disabled"} onclick="A.claimMonet()">${pend?"Demande en cours…":"Réclamer mes gains"}</button> <button class="btn" onclick="A.offMonet()">Désactiver</button></div>`:""}
+  ${m.reqs.length?`<h4 style="margin:14px 0 4px">Mes demandes de paiement</h4>`+m.reqs.map(r=>`<div class="sr"><span>${eur((r.cents||0)/100)} · ${st[r.status]||esc(r.status)}${r.msg?`<div class="sub">${esc(r.msg)}</div>`:""}</span><span class="sub">${ago(r.createdAt)}</span></div>`).join(""):""}`}
 function adInter(next,hostId){if($("inter"))return;
   const a=adPicker()();if(!a){next();return}
   const el=document.createElement("div");el.id="inter";el.style.cssText="position:fixed;inset:0;z-index:100;background:#000d;display:flex;align-items:center;justify-content:center;padding:16px";
@@ -607,16 +610,18 @@ const A=window.A={
   swipe(tab){goSwipe(tab)},
   snap(d){const sw=$("sw");if(sw)sw.scrollBy({top:d*sw.clientHeight,behavior:"smooth"})},
   async loadMonet(){const el=$("monet");if(!el)return;const uid=S.user.uid;
-    try{const [ps,er,po,mo]=await Promise.all([getDocs(query(collection(db,"posts"),where("authorId","==",uid))),getDocs(query(collection(db,"earnings"),where("to","==",uid),limit(5000))),getDocs(query(collection(db,"payouts"),where("uid","==",uid))),S.me.monet?getDoc(doc(db,"monet",uid)):Promise.resolve(null)]);
+    try{const [ps,er,po,mo,ac]=await Promise.all([getDocs(query(collection(db,"posts"),where("authorId","==",uid))),getDocs(query(collection(db,"earnings"),where("to","==",uid),limit(5000))),getDocs(query(collection(db,"payouts"),where("uid","==",uid))),S.me.monet?getDoc(doc(db,"monet",uid)):Promise.resolve(null),getDoc(doc(db,"monetReqs",uid))]);
       const reqs=po.docs.map(d=>({id:d.id,...d.data()})).sort((a,b)=>ms(b)-ms(a)),earned=er.size,used=reqs.filter(r=>r.status!=="refused").reduce((a,r)=>a+(r.cents||0),0);
-      S.mon={views:ps.docs.reduce((a,d)=>a+(d.data().views||0),0)+(S.me.liveViews||0),followers:S.me.followers||0,earned,avail:Math.max(0,earned-used),reqs,email:mo?.exists()?mo.data().email||"":""};drawMonet()}
+      S.mon={views:ps.docs.reduce((a,d)=>a+(d.data().views||0),0)+(S.me.liveViews||0),followers:S.me.followers||0,earned,avail:Math.max(0,earned-used),reqs,email:mo?.exists()?mo.data().email||"":"",access:ac.exists()?ac.data():null};drawMonet()}
     catch(e){el.innerHTML=`<h3>💰 Monétisation</h3><span class="err">${esc(errMsg(e))}</span>`}},
-  async saveMonet(){const m=S.mon,v=$("smn").value.trim();if(!m||m.followers<MON_FOL||m.views<MON_VIEWS)return alert("Monétisation pas encore débloquée.");if(!MAILRE.test(v))return alert("Email PayPal invalide.");
+  async saveMonet(){const m=S.mon,v=$("smn").value.trim();if(!m||!S.me.monetOk)return alert("Ta demande d'accès n'a pas encore été acceptée.");if(!MAILRE.test(v))return alert("Email PayPal invalide.");
     try{await setDoc(doc(db,"monet",S.user.uid),{email:v,uid:S.user.uid});await updateDoc(doc(db,"users",S.user.uid),{monet:true});S.me.monet=true;toast("Monétisation activée");A.loadMonet()}catch(e){alert(errMsg(e))}},
   async offMonet(){if(!confirm("Désactiver la monétisation ?"))return;
     try{await deleteDoc(doc(db,"monet",S.user.uid));await updateDoc(doc(db,"users",S.user.uid),{monet:false});S.me.monet=false;toast("Monétisation désactivée");A.loadMonet()}catch(e){alert(errMsg(e))}},
+  async askMonet(){const m=S.mon;if(!m)return;if(!confirm("Envoyer ta demande d'accès à la monétisation ?"))return;
+    try{await setDoc(doc(db,"monetReqs",S.user.uid),{uid:S.user.uid,name:S.me.name,followers:m.followers,views:m.views,status:"pending",createdAt:serverTimestamp()});toast("Demande envoyée");A.loadMonet()}catch(e){alert(errMsg(e))}},
   async claimMonet(){const m=S.mon;if(!m||m.avail<=0||m.reqs.some(r=>r.status==="pending"))return;
-    if(m.followers<MON_FOL||m.views<MON_VIEWS)return alert("Tu n'as plus les "+MON_FOL+" abonnés et "+MON_VIEWS+" vues nécessaires.");
+    if(!S.me.monetOk)return alert("Ton accès à la monétisation n'est pas validé.");
     if(!m.email)return alert("Enregistre d'abord ton email PayPal.");
     if(!confirm("Réclamer "+eur(m.avail/100)+" sur "+m.email+" ?"))return;
     try{await addDoc(collection(db,"payouts"),{uid:S.user.uid,name:S.me.name,email:m.email,cents:m.avail,status:"pending",createdAt:serverTimestamp()});toast("Demande envoyée");A.loadMonet()}catch(e){alert(errMsg(e))}},
