@@ -108,14 +108,11 @@ body.light{--bg:#f3f3fa;--sf:#fff;--sf2:#e4e4f0;--tx:#15151f;--mu:#62627a}
 <script type="module">
 import {initializeApp} from "https://www.gstatic.com/firebasejs/10.14.1/firebase-app.js";
 import {getAuth,onAuthStateChanged,signInWithPopup,GoogleAuthProvider,createUserWithEmailAndPassword,signInWithEmailAndPassword,updateProfile,signOut,sendPasswordResetEmail,deleteUser,reauthenticateWithPopup,reauthenticateWithCredential,EmailAuthProvider} from "https://www.gstatic.com/firebasejs/10.14.1/firebase-auth.js";
-import {getFirestore,collection,doc,getDoc,setDoc,addDoc,updateDoc,deleteDoc,query,orderBy,limit,getDocs,increment,serverTimestamp,where,arrayUnion,arrayRemove} from "https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js";
-import {getDatabase,ref as rref,push,set,onValue,onChildAdded,onChildRemoved,remove,update,onDisconnect,query as rquery,limitToLast} from "https://www.gstatic.com/firebasejs/10.14.1/firebase-database.js";
+import {getFirestore,collection,doc,getDoc,setDoc,addDoc,updateDoc,deleteDoc,query,orderBy,limit,getDocs,increment,serverTimestamp,where,arrayUnion,arrayRemove,onSnapshot,deleteField} from "https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js";
 
 const app=initializeApp({apiKey:"AIzaSyDtCmvlrwEblK8a5e0L9vwuLZ2XCIstiDo",authDomain:"pide-post.firebaseapp.com",projectId:"pide-post",storageBucket:"pide-post.firebasestorage.app",messagingSenderId:"664464722132",appId:"1:664464722132:web:6a1479bf8d1aea7e8b9341"});
 const auth=getAuth(app),db=getFirestore(app);
-const DB_URL=""; // ← colle ici l'URL affichée en haut de Firebase → Realtime Database (ex: https://pide-post-default-rtdb.europe-west1.firebasedatabase.app). Vide = URL par défaut.
-let rdb;try{rdb=getDatabase(app,DB_URL||undefined)}catch(e){console.error("RTDB",e)}
-const MAX_VIEWERS=10; // la voix/vidéo part directement du créateur vers chaque spectateur (WebRTC) : au-delà de ~10, sa connexion sature
+const MAX_VIEWERS=10; // comme dans Nexus, la voix/vidéo part directement du créateur vers chaque spectateur (WebRTC) : au-delà de ~10, sa connexion sature
 const ICE={iceServers:[{urls:"stun:stun.l.google.com:19302"},{urls:"stun:stun1.l.google.com:19302"}]};
 const $=id=>document.getElementById(id);
 const esc=s=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
@@ -177,7 +174,7 @@ function score(p){
   return aff*1.2+rate*8+ctr*5+fresh*2+((p.views||0)<20?1.5:0)+(S.follows.has(p.authorId)?2:0)+Math.log1p(eng)*.5}
 const trend=p=>((p.likes||0)*3+(p.comments||0)*5+(p.views||0)*.2)/Math.pow((Date.now()-ms(p))/36e5+2,1.3);
 function visible(){
-  let a=[...S.posts];
+  let a=S.posts.filter(p=>!p.liveOn);
   if(S.cat!=="Tout")a=a.filter(p=>p.cat===S.cat);
   if(S.tag)a=a.filter(p=>(p.tags||[]).includes(S.tag));
   if(S.q){const q=S.q.toLowerCase();a=a.filter(p=>((p.title||"")+" "+p.text+" "+nm(p.authorId,p.authorName)+" "+(p.tags||[]).join(" ")).toLowerCase().includes(q))}
@@ -279,7 +276,7 @@ const cmHTML=l=>l.length?l.map(c=>`<div class="cm"><span onclick="A.profile('${c
 function renderPost(){
   const p=S.posts.find(x=>x.id===S.view.id);if(!p){S.view={t:"feed"};return render()}
   const imgs=p.imgs||[],gi=Math.min(S.gi,imgs.length-1),own=p.authorId===S.user.uid,fl=S.follows.has(p.authorId);const sv=(S.me.saved||[]).includes(p.id),cmOn=S.users[p.authorId]?.settings?.comments!==false;
-  const rec=S.posts.filter(x=>x.id!==p.id).sort((a,b)=>score(b)-score(a)).slice(0,8);
+  const rec=S.posts.filter(x=>x.id!==p.id&&!x.liveOn).sort((a,b)=>score(b)-score(a)).slice(0,8);
   const desc=esc(p.text).replace(/#([\p{L}\p{N}_]{2,30})/gu,(m,t)=>`<span class="tag" onclick="A.filter('${t.toLowerCase()}')">${m}</span>`);
   const d=p.createdAt?.toDate?.().toLocaleDateString("fr-FR",{day:"numeric",month:"long",year:"numeric"})||"";
   $("ct").innerHTML=`<div class="wt"><div>
@@ -321,57 +318,79 @@ function renderNotifs(){
   const T={like:"a aimé ton post",comment:"a commenté ton post",follow:"s'est abonné à toi"};
   $("ct").innerHTML=`<div style="max-width:680px"><h2 style="margin-top:0">🔔 Notifications</h2>${S.notifs.length?S.notifs.map(n=>`<div class="nt ${n.read?"":"un"}" onclick="${n.pid?`A.open('${n.pid}')`:`A.profile('${n.from}')`}">${av(n.from,40)}<div><b>${esc(nm(n.from))}</b> ${T[n.type]||""}<div class="sub">${ago(n.createdAt)}</div></div></div>`).join(""):`<div class="empty">Aucune notification pour l'instant.</div>`}</div>`}
 
-/* ---------- LIVE (Realtime Database + WebRTC audio) ---------- */
-function watchLives(){if(S.lw||!rdb)return;S.lw=1;
-  onValue(rref(rdb,"lives"),sn=>{const v=sn.val()||{},sig=JSON.stringify(Object.entries(v).map(([k,x])=>[k,x.n||0,x.title]));S.lives=v;
-    if(sig!==S.lsig){S.lsig=sig;if(S.me&&S.view.t==="feed")renderFeed()}},e=>console.warn("RTDB lives",e))}
-const addIce=(pc,c)=>{if(pc.remoteDescription)pc.addIceCandidate(c).catch(()=>{});else(pc._q=pc._q||[]).push(c)};
-const setRemote=async(pc,d)=>{await pc.setRemoteDescription(d);(pc._q||[]).forEach(c=>pc.addIceCandidate(c).catch(()=>{}));pc._q=[]};
-function leaveLive(){if(!L)return;L.un.forEach(f=>{try{f()}catch(e){}});
+/* ---------- LIVE : WebRTC + signalisation Firestore, comme dans Nexus (aucun service en plus) ---------- */
+const lref=id=>doc(db,"posts",id);
+const bm=x=>x.beat?.toMillis?.()||Date.now();
+function applyLives(){
+  const raw=S.liveRaw||{},now=Date.now(),v={};
+  Object.entries(raw).forEach(([id,x])=>{
+    if(S.user&&x.authorId===S.user.uid&&(!L||L.id!==id)&&now-bm(x)>3e5)deleteDoc(lref(id)).catch(()=>{});
+    if(now-bm(x)<9e4)v[id]={...x,hostId:x.authorId,hostName:x.authorName}});
+  const sig=JSON.stringify(Object.entries(v).map(([k,x])=>[k,x.n||0,x.title]));S.lives=v;
+  if(sig!==S.lsig){S.lsig=sig;if(S.me&&S.view.t==="feed")renderFeed()}}
+function watchLives(){if(S.lw)return;S.lw=1;
+  onSnapshot(query(collection(db,"posts"),where("liveOn","==",true)),sn=>{S.liveRaw={};sn.docs.forEach(d=>S.liveRaw[d.id]=d.data());applyLives()},e=>console.warn("lives",e));
+  setInterval(applyLives,15000)}
+const waitIce=(pc,t=4000)=>new Promise(res=>{if(pc.iceGatheringState==="complete")return res();
+  const h=()=>{if(pc.iceGatheringState==="complete"){clearTimeout(tm);pc.removeEventListener("icegatheringstatechange",h);res()}},tm=setTimeout(()=>{pc.removeEventListener("icegatheringstatechange",h);res()},t);
+  pc.addEventListener("icegatheringstatechange",h)});
+function leaveLive(){if(!L)return;clearInterval(L.hb);clearTimeout(L.ct);L.un.forEach(f=>{try{f()}catch(e){}});
   Object.values(L.pcs||{}).forEach(p=>p.close());L.pc?.close();
   if(L.host)[L.stream,L.vstream].forEach(st=>st&&st.getTracks().forEach(t=>t.stop()));
   if(L.audio)L.audio.srcObject=null;
-  if(!L.host&&rdb){remove(rref(rdb,"liveViewers/"+L.id+"/"+S.user.uid)).catch(()=>{});remove(rref(rdb,"liveRtc/"+L.id+"/"+S.user.uid)).catch(()=>{})}
+  if(!L.host)updateDoc(lref(L.id),{["rtc."+S.user.uid]:deleteField()}).catch(()=>{});
   L=null}
-async function connectViewer(vid){
-  const id=L.id,pc=new RTCPeerConnection(ICE),base="liveRtc/"+id+"/"+vid;
-  L.pcs[vid]?.close();L.pcs[vid]=pc;pc._snd={};
-  pc.onicecandidate=e=>e.candidate&&push(rref(rdb,base+"/h"),e.candidate.toJSON());
-  pc.onnegotiationneeded=async()=>{if(pc.signalingState!=="stable")return;
-    try{const o=await pc.createOffer();if(pc.signalingState!=="stable")return;await pc.setLocalDescription(o);
-      pc._rev=Date.now();await set(rref(rdb,base+"/offer"),{type:o.type,sdp:o.sdp,rev:pc._rev})}catch(e){console.warn("negotiation",e)}};
-  await remove(rref(rdb,base));
-  L?.un.push(onValue(rref(rdb,base+"/answer"),sn=>{const a=sn.val();if(a&&a.rev===pc._rev&&pc.signalingState==="have-local-offer")setRemote(pc,a).catch(()=>{})}));
-  L?.un.push(onChildAdded(rref(rdb,base+"/v"),sn=>addIce(pc,sn.val())));
-  addTracks(pc)}
+/* --- côté créateur --- */
 function addTracks(pc){
   if(!L||pc.connectionState==="closed")return;
   L.stream.getTracks().forEach(t=>{if(!pc._snd[t.id])pc._snd[t.id]=pc.addTrack(t,L.stream)});
   if(L.vtrack&&!pc._snd[L.vtrack.id])pc._snd[L.vtrack.id]=pc.addTrack(L.vtrack,L.vstream)}
+async function offer(vid,pc){if(!L||pc.signalingState!=="stable")return;
+  try{const o=await pc.createOffer();if(pc.signalingState!=="stable")return;await pc.setLocalDescription(o);await waitIce(pc);
+    pc._rev=Date.now();await updateDoc(lref(L.id),{["rtc."+vid+".o"]:{type:pc.localDescription.type,sdp:pc.localDescription.sdp,rev:pc._rev}})}catch(e){console.warn("offer",e)}}
+function countViewers(){if(!L?.host)return;clearTimeout(L.ct);
+  L.ct=setTimeout(()=>{if(!L)return;const n=Object.values(L.pcs).filter(p=>p.connectionState==="connected").length;if(n!==L.n){L.n=n;updateDoc(lref(L.id),{n}).catch(()=>{})}},800)}
+function peer(vid,j){
+  const pc=new RTCPeerConnection(ICE);L.pcs[vid]?.close();L.pcs[vid]=pc;pc._j=j;pc._snd={};
+  pc.onconnectionstatechange=()=>{countViewers();if(pc.connectionState==="failed")pc.close()};
+  pc.onnegotiationneeded=()=>offer(vid,pc);
+  addTracks(pc)}
+function hostSync(d){
+  const r=d.rtc||{};
+  Object.entries(r).forEach(([vid,x])=>{const pc=L.pcs[vid];
+    if(x.j&&(!pc||pc._j!==x.j)){if(Object.keys(L.pcs).length<MAX_VIEWERS)peer(vid,x.j)}
+    else if(pc&&x.a&&x.a.rev===pc._rev&&pc.signalingState==="have-local-offer")pc.setRemoteDescription(x.a).catch(()=>{})});
+  Object.keys(L.pcs).forEach(vid=>{if(!r[vid]){L.pcs[vid].close();delete L.pcs[vid];countViewers()}})}
+/* --- chat, réactions, images du créateur : sous-collection du post --- */
 function listenLive(id){
-  const c=(q,fn)=>L.un.push(onChildAdded(q,fn)),v=(q,fn)=>L.un.push(onValue(q,fn));
-  c(rquery(rref(rdb,"liveChat/"+id),limitToLast(100)),sn=>{L.msgs.push(sn.val());addMsg(sn.val())});
-  c(rquery(rref(rdb,"liveReact/"+id),limitToLast(30)),sn=>{const r=sn.val();if(r.c>=L.t0)floatRx(r.e)});
-  v(rref(rdb,"livePoll/"+id),sn=>{L.poll=sn.val();drawPoll()});
-  v(rref(rdb,"liveImg/"+id),sn=>{L.img=sn.val()?.src||"";drawImg()});
-  v(rref(rdb,"lives/"+id),sn=>{const x=sn.val();if(x){L.info=x;drawMic();drawVideo()}else if(!L.host){toast("Le live est terminé");leaveLive();S.view={t:"feed"};render()}})}
+  L.un.push(onSnapshot(query(collection(db,"posts",id,"comments"),orderBy("createdAt","desc"),limit(100)),sn=>{
+    if(!L||L.id!==id)return;
+    sn.docChanges().filter(c=>c.type==="added").map(c=>c.doc.data()).sort((x,y)=>ms(x)-ms(y)).forEach(m=>{
+      if(m.kind==="react"){if(m.c>=L.t0)floatRx(m.e)}
+      else if(m.kind==="img"){if(m.uid===L.info?.hostId){L.img=m.src||"";drawImg()}}
+      else if(m.kind==="chat"){L.msgs.push(m);addMsg(m)}})}))}
+/* --- côté spectateur --- */
 async function joinLive(id){
-  if(!rdb)return alert("Realtime Database indisponible : vérifie DB_URL dans le fichier.");
+  const l=S.lives[id];if(!l)return;
   if(L&&L.id===id){S.view={t:"live",id};return render()}
-  const l=S.lives[id];if(!l||l.hostId===S.user.uid)return;
+  if(l.hostId===S.user.uid)return;
   if((l.n||0)>=MAX_VIEWERS)return alert("Ce live est complet ("+MAX_VIEWERS+" spectateurs max).");
   if(L?.host)return alert("Termine d'abord ton propre live.");
   if(L)leaveLive();
-  const uid=S.user.uid,pc=new RTCPeerConnection(ICE),base="liveRtc/"+id+"/"+uid,au=new Audio();au.autoplay=true;
-  L={id,host:false,un:[],msgs:[],t0:Date.now(),info:l,pcs:{},pc,audio:au};
+  const uid=S.user.uid,pc=new RTCPeerConnection(ICE),au=new Audio();au.autoplay=true;
+  L={id,host:false,un:[],msgs:[],t0:Date.now(),info:l,pc,audio:au};
   S.view={t:"live",id};render();listenLive(id);
   pc.ontrack=e=>{if(!L)return;if(e.track.kind==="audio"){au.srcObject=e.streams[0];au.play().catch(()=>{})}else{L.vstream=e.streams[0];drawVideo()}};
-  pc.onicecandidate=e=>e.candidate&&push(rref(rdb,base+"/v"),e.candidate.toJSON());
-  await remove(rref(rdb,base));
-  L?.un.push(onValue(rref(rdb,base+"/offer"),async sn=>{const o=sn.val();if(!o||o.rev===pc._rev)return;pc._rev=o.rev;
-    try{await setRemote(pc,o);const an=await pc.createAnswer();await pc.setLocalDescription(an);set(rref(rdb,base+"/answer"),{type:an.type,sdp:an.sdp,rev:o.rev})}catch(e){console.warn("answer",e)}}));
-  L?.un.push(onChildAdded(rref(rdb,base+"/h"),sn=>addIce(pc,sn.val())));
-  const pr=rref(rdb,"liveViewers/"+id+"/"+uid);await set(pr,true);onDisconnect(pr).remove()}
+  try{await updateDoc(lref(id),{["rtc."+uid]:{j:Date.now()}})}catch(e){toast("Connexion au live impossible");leaveLive();S.view={t:"feed"};return render()}
+  if(!L||L.id!==id)return;
+  L.un.push(onSnapshot(lref(id),async sn=>{
+    if(!L||L.id!==id)return;
+    if(!sn.exists()||!sn.data().liveOn){toast("Le live est terminé");leaveLive();S.view={t:"feed"};return render()}
+    const d=sn.data();L.info={...d,hostId:d.authorId,hostName:d.authorName};L.poll=d.lpoll||null;L.votes=d.lvotes||{};drawMic();drawVideo();drawPoll();
+    const o=d.rtc?.[uid]?.o;
+    if(o&&o.rev!==pc._rev){pc._rev=o.rev;
+      try{await pc.setRemoteDescription({type:o.type,sdp:o.sdp});const an=await pc.createAnswer();await pc.setLocalDescription(an);await waitIce(pc);
+        await updateDoc(lref(id),{["rtc."+uid+".a"]:{type:pc.localDescription.type,sdp:pc.localDescription.sdp,rev:o.rev}})}catch(e){console.warn("answer",e)}}}))}
 function addMsg(m){const b=$("lchat");if(!b)return;const d=document.createElement("div");d.className="msg";d.innerHTML=av(m.uid,28)+`<div><b>${esc(m.name)}</b> ${esc(m.text)}</div>`;b.appendChild(d);b.scrollTop=b.scrollHeight}
 function floatRx(e){const st=$("stage");if(!st)return;const x=document.createElement("span");x.className="rx";x.textContent=e;x.style.left=(8+Math.random()*80)+"%";st.appendChild(x);setTimeout(()=>x.remove(),2700)}
 function drawMic(){const m=$("mic"),n=$("ln"),k=L.info?.n||0;if(m)m.textContent=L.info?.mic===false?"🔇 Micro coupé":"🎙️ Le créateur parle en direct";if(n)n.textContent=k+" spectateur"+(k>1?"s":"")}
@@ -383,7 +402,7 @@ function drawVideo(){const c=$("agv");if(!c||!L)return;
   if(!v){v=document.createElement("video");v.autoplay=true;v.muted=true;v.playsInline=true;v.style.cssText="width:100%;height:100%;object-fit:contain;background:#000";c.appendChild(v)}
   if(v.srcObject!==L.vstream)v.srcObject=L.vstream;v.play().catch(()=>{})}
 function drawPoll(){const el=$("lpoll");if(!el)return;const p=L.poll;if(!p){el.innerHTML="";return}
-  const vs=Object.values(p.votes||{}),tot=vs.length,my=p.votes?.[S.user.uid],show=L.host||my!==undefined;
+  const V=L.votes||{},vs=Object.values(V),tot=vs.length,my=V[S.user.uid],show=L.host||my!==undefined;
   el.innerHTML=`<div class="poll"><b>📊 ${esc(p.q)}</b>${p.opts.map((o,i)=>{const n=vs.filter(x=>x===i).length,pc=tot?Math.round(n*100/tot):0;
     return show?`<div class="po"><i style="width:${pc}%"></i><span>${esc(o)}${my===i?" ✓":""}</span><em>${pc}%</em></div>`:`<button class="po" onclick="A.lvote(${i})"><span>${esc(o)}</span></button>`}).join("")}<div class="sub" style="margin-top:6px">${tot} vote${tot>1?"s":""}</div>${L.host?`<button class="btn" style="margin-top:8px" onclick="A.closePoll()">Fermer le sondage</button>`:""}</div>`}
 function renderLive(){
@@ -462,7 +481,7 @@ const A=window.A={
       await addDoc(collection(db,"posts"),d);boost(tags,2);await loadFeed();A.close();S.view={t:"feed"};render()}
     catch(e){showErr(errMsg(e));$("pb").disabled=false}},
   async open(id){
-    const p=S.posts.find(x=>x.id===id);if(!p)return;
+    const p=S.posts.find(x=>x.id===id);if(!p)return;if(p.liveOn)return joinLive(id);
     if(p.authorId!==S.user.uid){
       if(once("v_"+id)){p.views=(p.views||0)+1;updateDoc(doc(db,"posts",id),{views:increment(1)}).catch(()=>{});boost(p.tags,1)}
       if(once("c_"+id)){p.clicks=(p.clicks||0)+1;updateDoc(doc(db,"posts",id),{clicks:increment(1)}).catch(()=>{})}}
@@ -524,29 +543,30 @@ const A=window.A={
     <div class="err" id="err"></div><button class="pri" onclick="A.startLive()">Démarrer le live</button> <button class="btn" onclick="A.close()">Annuler</button></div></div>`},
   async startLive(){
     const t=$("lt").value.trim();if(t.length<3)return showErr("Donne un titre au live (3 caractères min.).");
-    if(!rdb)return showErr("Realtime Database indisponible : vérifie DB_URL dans le fichier.");
     let stream;try{stream=await navigator.mediaDevices.getUserMedia({audio:{echoCancellation:true,noiseSuppression:true}})}catch(e){return showErr("Micro refusé ou introuvable : autorise-le dans le navigateur.")}
-    const uid=S.user.uid,r=push(rref(rdb,"lives")),id=r.key,info={hostId:uid,hostName:S.me.name,title:t,n:0,mic:true,t:Date.now()};
-    try{await set(r,info)}catch(e){stream.getTracks().forEach(x=>x.stop());return showErr("Accès refusé à Realtime Database : vérifie les règles et DB_URL.")}
-    onDisconnect(r).remove();
-    L={id,host:true,un:[],msgs:[],t0:Date.now(),info,pcs:{},stream};
-    L.un.push(onChildAdded(rref(rdb,"liveViewers/"+id),sn=>connectViewer(sn.key)));
-    L.un.push(onChildRemoved(rref(rdb,"liveViewers/"+id),sn=>{L?.pcs[sn.key]?.close();if(L)delete L.pcs[sn.key];remove(rref(rdb,"liveRtc/"+id+"/"+sn.key)).catch(()=>{})}));
-    L.un.push(onValue(rref(rdb,"liveViewers/"+id),sn=>update(r,{n:sn.numChildren()}).catch(()=>{})));
+    const uid=S.user.uid;let id;
+    try{id=(await addDoc(collection(db,"posts"),{title:t,text:"",tags:[],imgs:[],thumb:"",cat:"Live",mood:"",place:"",link:"",authorId:uid,authorName:S.me.name,likes:0,comments:0,views:0,clicks:0,impressions:0,createdAt:serverTimestamp(),live:true,liveOn:true,beat:serverTimestamp(),n:0,mic:true,video:null})).id}
+    catch(e){stream.getTracks().forEach(x=>x.stop());return showErr(errMsg(e))}
+    L={id,host:true,un:[],msgs:[],t0:Date.now(),info:{hostId:uid,hostName:S.me.name,title:t,n:0,mic:true},pcs:{},stream,n:0};
+    L.hb=setInterval(()=>updateDoc(lref(id),{beat:serverTimestamp()}).catch(()=>{}),20000);
+    L.un.push(onSnapshot(lref(id),sn=>{if(!L||L.id!==id||!sn.exists())return;const d=sn.data();L.info={...d,hostId:d.authorId,hostName:d.authorName};L.poll=d.lpoll||null;L.votes=d.lvotes||{};drawMic();drawPoll();hostSync(d)}));
     listenLive(id);A.close();S.view={t:"live",id};render()},
   async endLive(silent){if(!L||!L.host)return;if(!silent&&!confirm("Terminer le live ?"))return;const id=L.id;leaveLive();
-    for(const p of ["liveChat","liveReact","livePoll","liveImg","liveViewers","liveRtc","lives"])await remove(rref(rdb,p+"/"+id)).catch(()=>{});
+    try{await deleteDoc(lref(id))}catch(e){await updateDoc(lref(id),{liveOn:false}).catch(()=>{})}
     if(!silent){S.view={t:"feed"};render()}},
-  mic(){const t=L.stream.getAudioTracks()[0];t.enabled=!t.enabled;update(rref(rdb,"lives/"+L.id),{mic:t.enabled});toast(t.enabled?"Micro activé":"Micro coupé")},
+  mic(){const t=L.stream.getAudioTracks()[0];t.enabled=!t.enabled;updateDoc(lref(L.id),{mic:t.enabled}).catch(()=>{});toast(t.enabled?"Micro activé":"Micro coupé")},
   livePoll(){if(L.poll&&!confirm("Remplacer le sondage actuel ?"))return;const q=prompt("Question du sondage :");if(!q)return;
     const o=(prompt("Choix séparés par des virgules (2 à 4) :")||"").split(",").map(x=>x.trim()).filter(Boolean).slice(0,4);
-    if(o.length<2)return alert("Il faut au moins 2 choix.");set(rref(rdb,"livePoll/"+L.id),{q:q.slice(0,120),opts:o})},
-  closePoll(){remove(rref(rdb,"livePoll/"+L.id))},
-  lvote(i){set(rref(rdb,"livePoll/"+L.id+"/votes/"+S.user.uid),i)},
-  async liveImg(inp){const f=inp.files[0];if(!f)return;try{const d=await shrink(f,900,.6);await set(rref(rdb,"liveImg/"+L.id),{src:d,t:Date.now()})}catch(e){alert(errMsg(e))}inp.value=""},
-  rmImg(){remove(rref(rdb,"liveImg/"+L.id))},
-  say(){const i=$("lmsg"),t=i.value.trim().slice(0,200);if(!t)return;i.value="";push(rref(rdb,"liveChat/"+L.id),{uid:S.user.uid,name:S.me.name,text:t,t:Date.now()})},
-  react(e){const n=Date.now();if(n-(L.lr||0)<400)return;L.lr=n;push(rref(rdb,"liveReact/"+L.id),{uid:S.user.uid,e,c:n})},
+    if(o.length<2)return alert("Il faut au moins 2 choix.");updateDoc(lref(L.id),{lpoll:{q:q.slice(0,120),opts:o},lvotes:{}}).catch(e=>alert(errMsg(e)))},
+  closePoll(){updateDoc(lref(L.id),{lpoll:deleteField(),lvotes:deleteField()}).catch(()=>{})},
+  lvote(i){updateDoc(lref(L.id),{["lvotes."+S.user.uid]:i}).catch(e=>alert(errMsg(e)))},
+  async liveImg(inp){const f=inp.files[0];if(!f)return;
+    try{const d=await shrink(f,720,.5);await addDoc(collection(db,"posts",L.id,"comments"),{kind:"img",src:d,uid:S.user.uid,createdAt:serverTimestamp()})}catch(e){alert(errMsg(e))}inp.value=""},
+  rmImg(){addDoc(collection(db,"posts",L.id,"comments"),{kind:"img",src:"",uid:S.user.uid,createdAt:serverTimestamp()}).catch(()=>{})},
+  say(){const i=$("lmsg"),t=i.value.trim().slice(0,200);if(!t)return;i.value="";
+    addDoc(collection(db,"posts",L.id,"comments"),{kind:"chat",uid:S.user.uid,name:S.me.name,text:t,createdAt:serverTimestamp()}).catch(e=>alert(errMsg(e)))},
+  react(e){const n=Date.now();if(n-(L.lr||0)<800)return;L.lr=n;
+    addDoc(collection(db,"posts",L.id,"comments"),{kind:"react",uid:S.user.uid,e,c:n,createdAt:serverTimestamp()}).catch(()=>{})},
   sound(){L.audio?.play().then(()=>toast("Son activé"),()=>toast("Clique sur la page puis réessaie"))},
   async startVideo(kind){
     if(!L?.host)return;
@@ -556,11 +576,12 @@ const A=window.A={
     A.stopVideo(true);
     const t=st.getVideoTracks()[0];t.contentHint=kind==="screen"?"detail":"motion";t.onended=()=>A.stopVideo();
     L.vstream=st;L.vtrack=t;Object.values(L.pcs).forEach(addTracks);
-    update(rref(rdb,"lives/"+L.id),{video:kind});drawVideo();toast(kind==="screen"?"Écran partagé en direct":"Caméra en direct")},
+    updateDoc(lref(L.id),{video:kind}).catch(()=>{});drawVideo();toast(kind==="screen"?"Écran partagé en direct":"Caméra en direct")},
   stopVideo(silent){const t=L?.vtrack;if(!t||!L.host)return;
     Object.values(L.pcs).forEach(pc=>{const sd=pc._snd?.[t.id];if(sd){try{pc.removeTrack(sd)}catch(e){}delete pc._snd[t.id]}});
-    t.stop();L.vtrack=null;L.vstream=null;update(rref(rdb,"lives/"+L.id),{video:null});drawVideo();if(silent!==true)toast("Vidéo arrêtée")}
+    t.stop();L.vtrack=null;L.vstream=null;updateDoc(lref(L.id),{video:null}).catch(()=>{});drawVideo();if(silent!==true)toast("Vidéo arrêtée")}
 };
+addEventListener("pagehide",()=>{if(L?.host)updateDoc(lref(L.id),{liveOn:false}).catch(()=>{})});
 </script>
 </body>
 </html>
