@@ -551,7 +551,7 @@ function drawVideo(){const c=$("agv");if(!c||!L)return;
   let vm=$("vmain");
   if(!main)vm?.remove();
   else{if(!vm){vm=document.createElement("video");vm.id="vmain";vm.autoplay=true;vm.muted=true;vm.playsInline=true;vm.style.cssText=`position:absolute;inset:0;width:100%;height:100%;object-fit:${I.vert?"cover":"contain"};background:#000`;c.prepend(vm)}
-    vm.style.objectFit=I.vert&&main===cam?"cover":"contain";if(vm.srcObject!==main)vm.srcObject=main;vm.play().catch(()=>{})}
+    vm.style.objectFit="contain";if(vm.srcObject!==main)vm.srcObject=main;vm.play().catch(()=>{})}
   let pw=$("vpip");
   if(!pip)pw?.remove();
   else{const P=I.pip||{x:70,y:66,w:26};
@@ -821,7 +821,7 @@ const A=window.A={
     addDoc(collection(db,"posts",L.id,"comments"),{kind:"react",uid:S.user.uid,e,c:n,createdAt:serverTimestamp()}).catch(()=>{})},
   sound(){L.audio?.play().then(()=>toast("Son activé"),()=>toast("Clique sur la page puis réessaie"))},
   async toggleCam(){if(!L?.host)return;if(L.camTrack)return A.stopTrack("cam");
-    let st;try{st=await navigator.mediaDevices.getUserMedia({video:L.info?.vert?{width:{ideal:480},height:{ideal:854},frameRate:{ideal:24}}:{width:{ideal:854},height:{ideal:480},frameRate:{ideal:24}},audio:false})}
+    let st;try{st=await navigator.mediaDevices.getUserMedia({video:{width:{ideal:1280},height:{ideal:720},aspectRatio:{ideal:16/9},frameRate:{ideal:24}},audio:false})}
     catch(e){return alert("Caméra refusée ou introuvable : autorise-la dans le navigateur.")}
     A.setTrack("cam",st)},
   async toggleScr(){if(!L?.host)return;if(L.scrTrack)return A.stopTrack("scr");
