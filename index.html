@@ -267,6 +267,7 @@ function slideHTML(p){
    <div class="sact"><button class="sb lk ${S.likes.has(p.id)?"on":""}" data-id="${esc(p.id)}" onclick="A.like('${esc(p.id)}')"><span>♥</span><small>${fmt(p.likes)}</small></button>
     <button class="sb" onclick="A.open('${esc(p.id)}')"><span>💬</span><small>${fmt(p.comments)}</small></button>
     <button class="sb" onclick="A.share('${esc(p.id)}')"><span>↗</span></button>
+    ${donInfo(p.authorId)&&p.authorId!==S.user.uid?`<button class="sb" onclick="A.donate('${esc(p.authorId)}')"><span>💝</span></button>`:""}
     <button class="sb sv ${sv?"on":""}" data-id="${esc(p.id)}" onclick="A.save('${esc(p.id)}')"><span>🔖</span></button></div></div></section>`}
 function adSlide(a){if(!a)return"";const bg=safeImg(a.img)?a.img:"";
   return `<section class="sl" data-ad="${esc(a.id)}">${bg?`<img class="sbgi" src="${bg}">`:`<div class="sbgc" style="background:linear-gradient(135deg,hsl(${hue(a.id)} 65% 32%),hsl(${hue(a.id)+50} 65% 22%))"></div>`}
@@ -288,6 +289,13 @@ function renderSwipe(){
     if(once("v_"+t.id)){p.views=(p.views||0)+1;updateDoc(doc(db,"posts",t.id),{views:increment(1)}).catch(()=>{});boost(p.tags,1)}
     if(once("i_"+t.id))updateDoc(doc(db,"posts",t.id),{impressions:increment(1)}).catch(()=>{})}),{root:sw,threshold:.6});
   sw.querySelectorAll(".sl").forEach(c=>io.observe(c))}
+
+/* ---------- Dons (PayPal du créateur, optionnel) ---------- */
+const MAILRE=/^[^\s@]+@[^\s@]+\.[^\s@]+$/,USERRE=/^[A-Za-z0-9._-]{1,40}$/;
+const donInfo=uid=>{const v=String(S.users[uid]?.paypal||"").trim();if(!v)return null;if(MAILRE.test(v))return{t:"e",v};if(USERRE.test(v))return{t:"m",v};return null};
+const donURL=(uid,n)=>{const d=donInfo(uid);n=Math.round(+n*100)/100;if(!d||!(n>=1&&n<=5000))return"";
+  return d.t==="e"?`https://www.paypal.com/donate/?business=${encodeURIComponent(d.v)}&amount=${n}&currency_code=EUR`:`https://www.paypal.com/paypalme/${encodeURIComponent(d.v)}/${n}EUR`};
+const donBtn=uid=>donInfo(uid)&&uid!==S.user.uid?`<button class="btn" style="background:#ffcc00;color:#000" onclick="A.donate('${esc(uid)}')">💝 Faire un don</button>`:"";
 
 /* ---------- Écrans ---------- */
 function authHTML(){return `<div class="auth"><div class="logo" style="font-size:42px">PIDE Post</div>
@@ -385,7 +393,7 @@ function renderPost(){
     <div class="ab"><span onclick="A.profile('${p.authorId}')" style="cursor:pointer">${av(p.authorId,44)}</span>
       <div><b style="cursor:pointer" onclick="A.profile('${p.authorId}')">${esc(nm(p.authorId,p.authorName))}</b><div class="sub">${folTxt(p.authorId)}</div></div>
       ${own?`<button class="btn" onclick="A.edit('${p.id}')">✏️ Modifier</button> <button class="btn" onclick="A.del('${p.id}')">🗑</button>`:`<button class="fol ${fl?"on":""}" onclick="A.follow('${p.authorId}')">${fl?"✓ Abonné":"+ S'abonner"}</button>`}
-      <span class="sp"></span><div class="pill"><button class="${S.likes.has(p.id)?"on":""}" onclick="A.like('${p.id}')">♥ ${fmt(p.likes)}</button><button onclick="A.share('${p.id}')">↗ Partager</button><button class="${sv?"on":""}" title="Enregistrer" onclick="A.save('${p.id}')">🔖</button>${own?"":`<button title="Signaler" onclick="A.report('${p.id}')">⚑</button>`}</div></div>
+      ${donBtn(p.authorId)}<span class="sp"></span><div class="pill"><button class="${S.likes.has(p.id)?"on":""}" onclick="A.like('${p.id}')">♥ ${fmt(p.likes)}</button><button onclick="A.share('${p.id}')">↗ Partager</button><button class="${sv?"on":""}" title="Enregistrer" onclick="A.save('${p.id}')">🔖</button>${own?"":`<button title="Signaler" onclick="A.report('${p.id}')">⚑</button>`}</div></div>
     <div class="desc"><b>${fmt(p.views)} vues · ${d}</b>
       <div class="meta">${p.cat?`<span class="mc">${esc(p.cat)}</span>`:""}${p.mood?`<span class="mc">${esc(p.mood)}</span>`:""}${p.place?`<span class="mc">📍 ${esc(p.place)}</span>`:""}</div>${desc}</div>
     ${linkHTML(p)}${pollHTML(p)}
@@ -409,6 +417,7 @@ function renderSettings(){
    <div class="sr"><span>Couleur d'accent</span><span>${ac.map(c=>`<span class="dot ${(s.accent||ac[0])===c?"on":""}" style="background:${c}" onclick="A.pref('accent','${c}')"></span>`).join(" ")}</span></div></div>
   <div class="sc"><h3>Confidentialité</h3>${sw("comments","Autoriser les commentaires sur mes posts",s.comments!==false)}${sw("showFollowers","Afficher mon nombre d'abonnés",s.showFollowers!==false)}</div>
   <div class="sc"><h3>Recommandations</h3><div class="sub">Tes centres d'intérêt appris :</div><div class="meta">${top.length?top.map(t=>`<span class="mc">#${esc(t[0])}</span>`).join(""):`<span class="sub">Rien encore : like et commente des posts.</span>`}</div><button class="btn" onclick="A.resetReco()">Réinitialiser mes recommandations</button></div>
+  <div class="sc"><h3>Dons</h3><div class="sub">Optionnel : ton PayPal.me (ex. paypal.me/tonpseudo, conseillé) ou ton email PayPal. Rempli : un bouton « 💝 Faire un don » apparaît sous tes posts et tes lives. Vide : aucun bouton. Ce champ est visible publiquement.</div><input id="spp" placeholder="paypal.me/tonpseudo" value="${esc(S.me.paypal||"")}"><button class="pri" onclick="A.saveDon()">Enregistrer</button></div>
   <div class="sc"><h3>Mes publicités</h3><div id="myads"><span class="sub">Chargement…</span></div><button class="pri" style="margin-top:12px" onclick="A.adModal()">📢 Mettre une pub</button></div>
   <div class="sc"><h3>Compte</h3><div class="sr"><span>Email</span><span class="sub">${esc(u.email||"Compte Google")}</span></div>
    <div class="sr"><span>Mot de passe</span><button class="btn" onclick="A.resetPw()">Envoyer un email de réinitialisation</button></div>
@@ -534,7 +543,7 @@ function renderLive(){
    <h2 class="h1" style="margin:14px 0 0">${esc(l.title)}</h2>
    <div class="ab"><span>${av(l.hostId,44)}</span><div><b>${esc(nm(l.hostId,l.hostName))}</b><div class="sub" id="ln"></div></div><span class="sp"></span>
    ${host?`<button class="btn" onclick="A.mic()">🎙️ Micro</button><button class="btn" id="bcam" onclick="A.toggleCam()">📷 Caméra</button><button class="btn" id="bscr" onclick="A.toggleScr()">🖥 Écran</button><select style="width:auto;margin:0" title="Affichage" onchange="A.layout(this.value)"><option value="pip" ${l.layout!=="cam"&&l.layout!=="scr"?"selected":""}>Écran + petite cam</option><option value="cam" ${l.layout==="cam"?"selected":""}>Cam en grand</option><option value="scr" ${l.layout==="scr"?"selected":""}>Écran en grand</option></select><button class="btn" onclick="A.livePoll()">📊 Sondage</button><label class="btn">🖼 Image<input type="file" accept="image/*" hidden onchange="A.liveImg(this)"></label><button class="btn" onclick="A.rmImg()">Retirer l'image</button><button class="dg" onclick="A.endLive()">Terminer</button>`
-   :`<button class="btn" onclick="A.sound()">🔊 Activer le son</button><button class="fol ${fl?"on":""}" onclick="A.follow('${l.hostId}')">${fl?"✓ Abonné":"+ S'abonner"}</button><button class="btn" onclick="A.go('foryou')">Quitter</button>`}</div>
+   :`<button class="btn" onclick="A.sound()">🔊 Activer le son</button>${donBtn(l.hostId)}<button class="fol ${fl?"on":""}" onclick="A.follow('${l.hostId}')">${fl?"✓ Abonné":"+ S'abonner"}</button><button class="btn" onclick="A.go('foryou')">Quitter</button>`}</div>
    <div id="lpoll"></div></div>
    <div class="chat"><h4 style="margin:0 0 8px">💬 Chat en direct</h4><div class="msgs" id="lchat"></div>
     <div style="margin:8px 0">${["❤️","🔥","😂","👏","😮"].map(e=>`<button class="chip" onclick="A.react('${e}')">${e}</button>`).join(" ")}</div>
@@ -549,6 +558,15 @@ const A=window.A={
   swipe(){history.replaceState(null,"",location.pathname);S.tab="foryou";S.cat="Tout";S.tag=null;S.q="";S.view={t:"swipe"};
     const go=()=>{render();scrollTo(0,0)};loadFeed().then(go).catch(go)},
   snap(d){const sw=$("sw");if(sw)sw.scrollBy({top:d*sw.clientHeight,behavior:"smooth"})},
+  async saveDon(){let v=$("spp").value.trim().replace(/^https?:\/\//i,"").replace(/^(www\.)?paypal\.me\//i,"").replace(/^(www\.)?paypal\.com\/paypalme\//i,"").replace(/[\/?#].*$/,"");
+    if(v&&!MAILRE.test(v)&&!USERRE.test(v))return alert("PayPal invalide : mets ton PayPal.me ou ton email.");
+    try{await updateDoc(doc(db,"users",S.user.uid),{paypal:v});S.me.paypal=v;S.users[S.user.uid]=S.me;toast(v?"PayPal enregistré":"Bouton de don désactivé");render()}catch(e){alert(errMsg(e))}},
+  donate(uid){if(!donInfo(uid))return;S.donTo=uid;
+    $("modal").innerHTML=`<div class="modal"><div class="box"><h3 style="margin-top:0">💝 Soutenir ${esc(nm(uid))}</h3><div class="sub">Le don va directement à ${esc(nm(uid))} via PayPal. PIDE Post ne prélève rien.</div>
+    <div class="chips" style="padding:10px 0">${[2,5,10,20].map(n=>`<button class="chip" onclick="document.getElementById('dn').value=${n}">${n} €</button>`).join("")}</div>
+    <input id="dn" type="number" min="1" max="5000" step="1" value="5"><div class="err" id="err"></div>
+    <button class="pri" onclick="A.donGo()">Donner avec PayPal ↗</button> <button class="btn" onclick="A.close()">Annuler</button></div></div>`},
+  donGo(){const u=donURL(S.donTo,$("dn").value);if(!u)return showErr("Montant entre 1 et 5000 €.");window.open(u,"_blank","noopener,noreferrer");A.close()},
   adClick(id){const a=S.ads.find(x=>x.id===id),l=a&&safeLink(a.link);if(!l)return;
     if(a.authorId!==S.user.uid&&once("ac_"+id)){a.clicks=(a.clicks||0)+1;updateDoc(doc(db,"ads",id),{clicks:increment(1)}).catch(()=>{})}
     window.open(l,"_blank","noopener,noreferrer")},
