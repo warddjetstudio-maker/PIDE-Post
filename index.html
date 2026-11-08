@@ -224,12 +224,15 @@ const safeLink=l=>{try{const u=new URL(l);return /^https?:$/.test(u.protocol)?u.
 const safeImg=s=>typeof s==="string"&&/^data:image\/(jpeg|png|webp|gif);base64,[A-Za-z0-9+\/=]+$/.test(s);
 const adHost=a=>{try{return new URL(a.link).hostname}catch{return""}};
 const seenMap=()=>{try{return JSON.parse(localStorage.pp_adseen||"{}")}catch{return{}}};
-const adSeen=id=>Date.now()-(seenMap()[id]||0)<864e5; // une même pub n'est comptée qu'une fois / 24 h / spectateur
+const adSeen=id=>Date.now()-(seenMap()[id]||0)<6e5; // la pub s'affiche autant de fois qu'on veut ; elle n'est comptée qu'1 fois / 10 min / spectateur
 const markSeen=id=>{try{const m=seenMap();m[id]=Date.now();localStorage.pp_adseen=JSON.stringify(m)}catch{}};
 const adCap=a=>Math.max(10,Math.ceil(a.impTotal/AD_DAYS)); // plafond quotidien : pas tout d'un coup
-const adOk=a=>a.active!==false&&(a.impDone||0)<a.impTotal&&!!safeLink(a.link)&&!adSeen(a.id)&&(a.dayKey!==today()||(a.dayDone||0)<adCap(a));
+const adOk=a=>a.active!==false&&(a.impDone||0)<a.impTotal&&!!safeLink(a.link)&&(a.dayKey!==today()||(a.dayDone||0)<adCap(a));
 function adPicker(){const used=new Set();return()=>{const e=S.ads.filter(a=>!used.has(a.id)&&adOk(a));if(!e.length)return null;const a=e[Math.floor(Math.random()*e.length)];used.add(a.id);return a}}
-async function loadAds(){try{const q=await getDocs(query(collection(db,"ads"),where("active","==",true),limit(100)));S.ads=q.docs.map(d=>({id:d.id,...d.data()}))}catch(e){console.warn("ads",e);S.ads=[]}}
+async function loadAds(){S.adsErr="";
+  try{let q;try{q=await getDocs(query(collection(db,"ads"),where("active","==",true),limit(100)))}catch(e){console.warn("ads filtré",e);q=await getDocs(query(collection(db,"ads"),limit(100)))}
+    S.ads=q.docs.map(d=>({id:d.id,...d.data()})).filter(a=>a.active!==false)}
+  catch(e){console.warn("ads",e);S.ads=[];S.adsErr=errMsg(e)}}
 function countAd(id){const a=S.ads.find(x=>x.id===id);if(!a||a.authorId===S.user.uid||adSeen(id))return;markSeen(id);
   const d=today(),u={impDone:increment(1)};
   if(a.dayKey===d){u.dayDone=increment(1);a.dayDone=(a.dayDone||0)+1}else{u.dayKey=d;u.dayDone=1;a.dayKey=d;a.dayDone=1}
@@ -252,7 +255,7 @@ async function prepAd(){
 async function publishAd(order,paid,promo){
   const d=S.adDraft;
   await addDoc(collection(db,"ads"),{text:d.text,link:d.link,img:d.img,authorId:S.user.uid,authorName:S.me.name,impTotal:d.n,impDone:0,clicks:0,active:true,dayKey:"",dayDone:0,paid,order,promo:!!promo,createdAt:serverTimestamp()});
-  await loadAds();A.close();toast("Ta pub est en ligne 🎉");render()}
+  await loadAds();A.close();toast("Ta pub est en ligne 🎉");render();if(S.adsErr)alert("Pub enregistrée, mais les autres membres ne peuvent pas la lire : autorise la lecture de la collection « ads » dans les règles Firestore (allow read: if request.auth != null).\n\n"+S.adsErr)}
 function adUpdate(){const el=$("aprice");if(!el)return;const n=S.adN;
   el.textContent=S.adFree?"Total : 0,00 € (code appliqué)":(n>=AD_MIN&&n<=AD_MAX?"Total : "+eur(adPrice(n)):"Entre "+AD_MIN+" et "+AD_MAX.toLocaleString("fr-FR")+" affichages");
   const pp=$("pp"),fr=$("afree");if(pp)pp.style.display=S.adFree?"none":"";if(fr)fr.style.display=S.adFree?"":"none"}
@@ -348,7 +351,7 @@ function cardHTML(p){
     <div class="sub">${fmt(p.views)} vues · ${ago(p.createdAt)} · ♥ ${fmt(p.likes)}</div></div></div></div>`}
 const liveCard=(id,l)=>`<div class="vc" onclick="A.joinLive('${id}')"><div class="th"><div class="tc" style="background:linear-gradient(135deg,#ff2b5c,#7a1fff);color:#fff">🔴 EN DIRECT<br>${esc((l.title||"").slice(0,60))}</div><span class="bd l" style="background:#ff2b5c">LIVE</span><span class="bd">👁 ${l.n||0}</span></div><div class="row"><span>${av(l.hostId)}</span><div><div class="ti">${esc(l.title)}</div><div class="sub">${esc(nm(l.hostId,l.hostName))}</div><div class="sub">${l.n||0} spectateur${l.n>1?"s":""} · en direct</div></div></div></div>`;
 const gridHTML=(l,lv)=>{const pk=adPicker(),lc=lv?Object.entries(S.lives).map(([id,x])=>liveCard(id,x)).join(""):"";
-  return l.length||lc?`<div class="gr">${lc}${l.map((p,i)=>cardHTML(p)+((i===3||(i>3&&(i-3)%10===0))?adCard(pk()):"")).join("")}</div>`:`<div class="empty">Rien à voir ici pour l'instant.<br><button class="pri" onclick="A.compose()">Publier un post</button></div>`};
+  return l.length||lc?`<div class="gr">${lc}${l.map((p,i)=>cardHTML(p)+((i===Math.min(3,l.length-1)||(i>3&&(i-3)%10===0))?adCard(pk()):"")).join("")}</div>`:`<div class="empty">Rien à voir ici pour l'instant.<br><button class="pri" onclick="A.compose()">Publier un post</button></div>`};
 function afterGrid(){
   const io=new IntersectionObserver(es=>es.forEach(e=>{if(!e.isIntersecting)return;io.unobserve(e.target);
     const id=e.target.dataset.id;if(id&&once("i_"+id)){const p=S.posts.find(x=>x.id===id);
@@ -421,7 +424,7 @@ function renderSettings(){
   <div class="sc"><h3>Confidentialité</h3>${sw("comments","Autoriser les commentaires sur mes posts",s.comments!==false)}${sw("showFollowers","Afficher mon nombre d'abonnés",s.showFollowers!==false)}</div>
   <div class="sc"><h3>Recommandations</h3><div class="sub">Tes centres d'intérêt appris :</div><div class="meta">${top.length?top.map(t=>`<span class="mc">#${esc(t[0])}</span>`).join(""):`<span class="sub">Rien encore : like et commente des posts.</span>`}</div><button class="btn" onclick="A.resetReco()">Réinitialiser mes recommandations</button></div>
   ${donSettings()}
-  <div class="sc"><h3>Mes publicités</h3><div id="myads"><span class="sub">Chargement…</span></div><button class="pri" style="margin-top:12px" onclick="A.adModal()">📢 Mettre une pub</button></div>
+  <div class="sc"><h3>Mes publicités</h3>${S.adsErr?`<div class="err">Les pubs ne se chargent pas pour les autres membres : ${esc(S.adsErr)} → règles Firestore de « ads » (allow read: if request.auth != null).</div>`:""}<div id="myads"><span class="sub">Chargement…</span></div><button class="pri" style="margin-top:12px" onclick="A.adModal()">📢 Mettre une pub</button></div>
   <div class="sc"><h3>Compte</h3><div class="sr"><span>Email</span><span class="sub">${esc(u.email||"Compte Google")}</span></div>
    <div class="sr"><span>Mot de passe</span><button class="btn" onclick="A.resetPw()">Envoyer un email de réinitialisation</button></div>
    <div class="sr"><span>Mes données</span><button class="btn" onclick="A.exportData()">Télécharger (JSON)</button></div>
