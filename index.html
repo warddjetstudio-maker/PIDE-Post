@@ -131,6 +131,7 @@ body.light{--bg:#f3f3fa;--sf:#fff;--sf2:#e4e4f0;--tx:#15151f;--mu:#62627a}
 #inter img{width:100%;max-height:60vh;object-fit:contain;display:block}
 #inter .tc{width:100%;min-height:220px;display:flex}
 </style>
+<base target="_blank">
 </head>
 <body>
 <div id="app"></div>
@@ -570,15 +571,16 @@ function renderLive(){
 /* ---------- Pub de transition, autres lives ---------- */
 function goSwipe(tab,keep){history.replaceState(null,"",location.pathname);S.tab=tab||"foryou";if(!keep){S.cat="Tout";S.tag=null;S.q=""}S.view={t:"swipe"};
   const go=()=>{render();scrollTo(0,0)};loadFeed().then(go).catch(go)}
-/* ---------- Monétisation : 1 centime par pub payante passée avant un live ---------- */
-async function creditLive(a,hostId){
+/* ---------- Monétisation : par pub payante passée avant un live = (2 € TTC − TVA 20 %) / 100 vues / 2 (partage 50/50) ≈ 0,83 centime ---------- */
+async const CREDIT_LIVE=Math.round(AD_RATE*100/1.2/100/2*10000)/10000; // 2 € = 200 centimes TTC ; /1.2 (TVA) ; /100 (par vue) ; /2 (partage) = 0,8333 centime
+function creditLive(a,hostId){
   if(!a||!hostId||hostId===S.user.uid||a.authorId===S.user.uid)return;
   if(a.promo===true||!((+a.paid)>0))return; // pub gratuite (code de réduction) : aucun gain
   const b=Math.floor(Date.now()/6e5),k="pp_cr_"+hostId+"_"+b;if(sessionStorage[k])return;
   let u=S.users[hostId];if(!u){try{u=(await getDoc(doc(db,"users",hostId))).data()||{};S.users[hostId]=u}catch(e){return}}
   if(!u.monet)return; // le streamer n'a pas renseigné son email PayPal
   sessionStorage[k]=1;
-  setDoc(doc(db,"earnings",S.user.uid+"_"+hostId+"_"+b),{to:hostId,from:S.user.uid,adId:a.id,cents:1,createdAt:serverTimestamp()}).catch(()=>{})}
+  setDoc(doc(db,"earnings",S.user.uid+"_"+hostId+"_"+b),{to:hostId,from:S.user.uid,adId:a.id,cents:CREDIT_LIVE,createdAt:serverTimestamp()}).catch(()=>{})}
 function drawMonet(){const el=$("monet"),m=S.mon;if(!el||!m)return;
   const ok=!!S.me.monetOk,on=!!S.me.monet,pend=m.reqs.some(r=>r.status==="pending"),ar=m.access,
     st={pending:"⏳ En attente",paid:"✅ Payé",refused:"❌ Refusé"};
@@ -586,7 +588,7 @@ function drawMonet(){const el=$("monet"),m=S.mon;if(!el||!m)return;
   if(ok)acc=`<div class="sub" style="margin-top:8px">✅ Accès à la monétisation accepté.</div><input id="smn" type="email" placeholder="Ton email PayPal" value="${esc(m.email)}"><button class="pri" onclick="A.saveMonet()">${on?"Mettre à jour l'email":"Activer la monétisation"}</button>`;
   else if(ar?.status==="pending")acc=`<div class="sub" style="margin-top:8px">⏳ Demande envoyée, en attente de validation.</div>`;
   else acc=`${ar?.status==="refused"?`<div class="err" style="min-height:0;margin-top:8px">❌ Demande refusée${ar.msg?" : "+esc(ar.msg):""}</div>`:""}<button class="pri" style="margin-top:8px" onclick="A.askMonet()">${ar?"Refaire une demande":"Demander l'accès à la monétisation"}</button>`;
-  el.innerHTML=`<h3>💰 Monétisation</h3><div class="sub" style="margin-bottom:8px">Gagne 1 centime à chaque pub payante diffusée avant ton live (les pubs gratuites avec code de réduction ne comptent pas). Pour la débloquer, fais une demande : elle est validée à la main.</div>
+  el.innerHTML=`<h3>💰 Monétisation</h3><div class="sub" style="margin-bottom:8px">Gagne 0,83 centime à chaque pub payante diffusée avant ton live — calcul : 2 € TTC − TVA (20 %) = 1,67 € HT, ÷ 100 vues = 0,0167 €, ÷ 2 (partage 50/50 avec la plateforme) = 0,0083 € ≈ 0,83 centime. Les pubs gratuites avec code de réduction ne comptent pas. Pour la débloquer, fais une demande : elle est validée à la main.</div>
   <div class="sr"><span>Abonnés</span><b>${fmt(m.followers)}</b></div><div class="sr"><span>Vues (posts + lives)</span><b>${fmt(m.views)}</b></div>
   ${acc}
   ${ok&&on?`<div class="sr"><span>Gains disponibles</span><b>${eur(m.avail/100)}</b></div><div class="sub">Total généré : ${eur(m.earned/100)}</div><div style="margin-top:8px"><button class="pri" ${m.avail>0&&!pend?"":"disabled"} onclick="A.claimMonet()">${pend?"Demande en cours…":"Réclamer mes gains"}</button> <button class="btn" onclick="A.offMonet()">Désactiver</button></div>`:""}
@@ -611,7 +613,7 @@ const A=window.A={
   snap(d){const sw=$("sw");if(sw)sw.scrollBy({top:d*sw.clientHeight,behavior:"smooth"})},
   async loadMonet(){const el=$("monet");if(!el)return;const uid=S.user.uid;
     try{const [ps,er,po,mo,ac]=await Promise.all([getDocs(query(collection(db,"posts"),where("authorId","==",uid))),getDocs(query(collection(db,"earnings"),where("to","==",uid),limit(5000))),getDocs(query(collection(db,"payouts"),where("uid","==",uid))),S.me.monet?getDoc(doc(db,"monet",uid)):Promise.resolve(null),getDoc(doc(db,"monetReqs",uid))]);
-      const reqs=po.docs.map(d=>({id:d.id,...d.data()})).sort((a,b)=>ms(b)-ms(a)),earned=er.size,used=reqs.filter(r=>r.status!=="refused").reduce((a,r)=>a+(r.cents||0),0);
+      const reqs=po.docs.map(d=>({id:d.id,...d.data()})).sort((a,b)=>ms(b)-ms(a)),earned=Math.round(er.docs.reduce((a,d)=>a+(d.data().cents||0),0)*100)/100,used=reqs.filter(r=>r.status!=="refused").reduce((a,r)=>a+(r.cents||0),0);
       S.mon={views:ps.docs.reduce((a,d)=>a+(d.data().views||0),0)+(S.me.liveViews||0),followers:S.me.followers||0,earned,avail:Math.max(0,earned-used),reqs,email:mo?.exists()?mo.data().email||"":"",access:ac.exists()?ac.data():null};drawMonet()}
     catch(e){el.innerHTML=`<h3>💰 Monétisation</h3><span class="err">${esc(errMsg(e))}</span>`}},
   async saveMonet(){const m=S.mon,v=$("smn").value.trim();if(!m||!S.me.monetOk)return alert("Ta demande d'accès n'a pas encore été acceptée.");if(!MAILRE.test(v))return alert("Email PayPal invalide.");
