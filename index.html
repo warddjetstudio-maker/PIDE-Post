@@ -42,7 +42,6 @@ a{color:inherit;text-decoration:none}
 .ti{font-weight:700;font-size:15px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
 .sub{color:var(--mu);font-size:13px}
 .av{border-radius:50%;object-fit:cover;display:inline-flex;align-items:center;justify-content:center;font-weight:700;flex-shrink:0;color:#fff}
-.adin{width:100%;height:100%;display:flex;align-items:center;justify-content:center;overflow:hidden}
 .empty{text-align:center;color:var(--mu);padding:60px 0;line-height:2.4}
 .wt{display:grid;grid-template-columns:minmax(0,1fr) 380px;gap:26px}
 @media(max-width:1050px){.wt{grid-template-columns:1fr}}
@@ -103,6 +102,31 @@ body.light{--bg:#f3f3fa;--sf:#fff;--sf2:#e4e4f0;--tx:#15151f;--mu:#62627a}
 .chat{display:flex;flex-direction:column;height:580px;background:var(--sf);border-radius:var(--r);padding:12px}
 .msgs{flex:1;overflow:auto}.msg{display:flex;gap:8px;margin:8px 0;font-size:14px;align-items:flex-start;word-break:break-word}
 #simg{z-index:1}
+.ct.np{padding:0}
+.sw{overflow-y:auto;scroll-snap-type:y mandatory;scrollbar-width:none;overscroll-behavior:contain;background:#000}
+.sw::-webkit-scrollbar{display:none}
+.sl{position:relative;height:100%;scroll-snap-align:start;scroll-snap-stop:always;overflow:hidden;color:#fff}
+.sbgi{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;filter:blur(30px) brightness(.45);transform:scale(1.2)}
+.sbgc{position:absolute;inset:0}
+.sin{position:relative;height:100%;max-width:560px;margin:0 auto;display:flex;flex-direction:column;padding:12px 66px 14px 12px}
+.smd{position:relative;flex:1;min-height:0;display:flex;align-items:center;justify-content:center}
+.sim{display:flex;width:100%;height:100%;overflow-x:auto;scroll-snap-type:x mandatory;scrollbar-width:none}
+.sim::-webkit-scrollbar{display:none}
+.sim img{flex:0 0 100%;width:100%;height:100%;object-fit:contain;scroll-snap-align:center}
+.smd .tc{width:100%;height:100%;max-height:75%;border-radius:var(--r);font-size:24px;color:#fff}
+.smd .bd{z-index:2}
+.smd .spb{top:6px;left:6px}
+.sif{padding-top:10px;text-shadow:0 1px 6px #000}
+.sif .ti{-webkit-line-clamp:3;font-size:17px;margin-top:8px;color:#fff}
+.sif .sx{color:#e6e6f0;font-size:14px;margin-top:4px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.sact{position:absolute;right:8px;bottom:24px;display:flex;flex-direction:column;gap:14px;align-items:center;z-index:3}
+.sb{background:#0008;border:0;color:#fff;border-radius:50%;width:48px;height:48px;font-size:22px;cursor:pointer;display:flex;flex-direction:column;align-items:center;justify-content:center;line-height:1}
+.sb small{font-size:10px;margin-top:2px}
+.sb.on{color:var(--c2);box-shadow:0 0 0 2px var(--c2)}
+.snav{position:fixed;right:16px;top:50%;transform:translateY(-50%);display:flex;flex-direction:column;gap:10px;z-index:8}
+.snav button{width:44px;height:44px;border-radius:50%;border:0;background:var(--sf2);cursor:pointer;font-size:18px}
+@media(max-width:860px){.snav{display:none}}
+.adbtn{color:var(--c2);font-weight:700}
 </style>
 </head>
 <body>
@@ -120,8 +144,7 @@ const $=id=>document.getElementById(id);
 const esc=s=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 const TAG=/#([\p{L}\p{N}_]{2,30})/gu;
 const CATS=["Tout","Photo","Humour","Musique","Gaming","Voyage","Food","Actu","Autre"];
-const AD="https://pl32250031.profitableratecpmnetwork.com/f9/6c/6f/f96c6f084026a2c041c53df9ec4ac71d.js";
-const S={user:null,me:null,posts:[],users:{},likes:new Set(),votes:{},follows:new Set(),tab:"foryou",cat:"Tout",tag:null,q:"",view:{t:"feed"},gi:0,cm:{},adT:0,adUsed:false,mood:"",notifs:[],lives:{}};
+const S={user:null,me:null,posts:[],users:{},likes:new Set(),votes:{},follows:new Set(),tab:"foryou",cat:"Tout",tag:null,q:"",view:{t:"feed"},gi:0,cm:{},ads:[],mood:"",notifs:[],lives:{}};
 let L=null;
 const fmt=n=>n>=1e6?(n/1e6).toFixed(1)+" M":n>=1e3?(n/1e3).toFixed(1)+" k":(n||0);
 const ms=p=>p.createdAt?.toMillis?.()||Date.now();
@@ -164,7 +187,7 @@ async function loadSocial(){
 async function loadFeed(){
   const [s,us]=await Promise.all([getDocs(query(collection(db,"posts"),orderBy("createdAt","desc"),limit(80))),getDocs(query(collection(db,"users"),limit(300)))]);
   S.posts=s.docs.map(d=>({id:d.id,...d.data()}));
-  S.users={};us.docs.forEach(d=>S.users[d.id]=d.data());S.users[S.user.uid]=S.me}
+  S.users={};us.docs.forEach(d=>S.users[d.id]=d.data());S.users[S.user.uid]=S.me;await loadAds()}
 
 /* ---------- Algorithme ---------- */
 function score(p){
@@ -188,10 +211,83 @@ const boost=(tags,n)=>{if(!tags?.length||!S.me)return;const u={};S.me.tagWeights
   tags.forEach(t=>{u["tagWeights."+t]=increment(n);S.me.tagWeights[t]=(S.me.tagWeights[t]||0)+n});
   updateDoc(doc(db,"users",S.user.uid),u).catch(()=>{})};
 
-/* ---------- Pubs intégrées (même format qu'un post) ---------- */
-const adSlot=()=>{if(S.adUsed||Date.now()-S.adT<45000)return"";S.adUsed=true;
-  return `<div class="vc"><div class="th"><span class="spb">Sponsorisé</span><div class="adin"></div></div><div class="row"><span class="av" style="width:36px;height:36px;background:var(--sf2)">Ad</span><div><div class="ti">Publicité</div><div class="sub">Sponsorisé</div></div></div></div>`};
-function injectAd(){const el=document.querySelector(".adin");if(!el)return;S.adT=Date.now();const s=document.createElement("script");s.src=AD;el.appendChild(s)}
+/* ---------- Pubs des membres (payées via PayPal) ---------- */
+const PP_ID="BAAOY-3l2WzsOQ6F0YFXbK_i_Lp2PvWuxUpRcqnRuTy208H6QWOGuD7HFdj8Y-aWmFGLRsbPJW2MCRcaKo"; // Client ID PayPal (public). Jamais le Secret ici.
+const AD_UNIT=100,AD_RATE=2,AD_MIN=100,AD_MAX=100000,AD_DAYS=7; // 2 € / 100 affichages ; diffusion étalée sur 7 jours minimum
+const PROMO_H="0ba83311151315448242301c307b5a76ec21ae3cac53a28c2b74ecd08d4a2144"; // SHA-256 du code (le code n'apparaît pas en clair)
+const sha=async s=>[...new Uint8Array(await crypto.subtle.digest("SHA-256",new TextEncoder().encode(s)))].map(b=>b.toString(16).padStart(2,"0")).join("");
+const codeOK=async()=>{const v=($("ac")?.value||"").trim();if(!v||!crypto.subtle)return false;return (await sha(v))===PROMO_H};
+const adPrice=n=>Math.round(n/AD_UNIT*AD_RATE*100)/100;
+const eur=n=>n.toFixed(2).replace(".",",")+" €";
+const today=()=>new Date().toISOString().slice(0,10);
+const safeLink=l=>{try{const u=new URL(l);return /^https?:$/.test(u.protocol)?u.href:""}catch{return""}};
+const safeImg=s=>typeof s==="string"&&/^data:image\/(jpeg|png|webp|gif);base64,[A-Za-z0-9+\/=]+$/.test(s);
+const adHost=a=>{try{return new URL(a.link).hostname}catch{return""}};
+const seenMap=()=>{try{return JSON.parse(localStorage.pp_adseen||"{}")}catch{return{}}};
+const adSeen=id=>Date.now()-(seenMap()[id]||0)<864e5; // une même pub n'est comptée qu'une fois / 24 h / spectateur
+const markSeen=id=>{try{const m=seenMap();m[id]=Date.now();localStorage.pp_adseen=JSON.stringify(m)}catch{}};
+const adCap=a=>Math.max(10,Math.ceil(a.impTotal/AD_DAYS)); // plafond quotidien : pas tout d'un coup
+const adOk=a=>a.active!==false&&(a.impDone||0)<a.impTotal&&!!safeLink(a.link)&&!adSeen(a.id)&&(a.dayKey!==today()||(a.dayDone||0)<adCap(a));
+function adPicker(){const used=new Set();return()=>{const e=S.ads.filter(a=>!used.has(a.id)&&adOk(a));if(!e.length)return null;const a=e[Math.floor(Math.random()*e.length)];used.add(a.id);return a}}
+async function loadAds(){try{const q=await getDocs(query(collection(db,"ads"),where("active","==",true),limit(100)));S.ads=q.docs.map(d=>({id:d.id,...d.data()}))}catch(e){console.warn("ads",e);S.ads=[]}}
+function countAd(id){const a=S.ads.find(x=>x.id===id);if(!a||a.authorId===S.user.uid||adSeen(id))return;markSeen(id);
+  const d=today(),u={impDone:increment(1)};
+  if(a.dayKey===d){u.dayDone=increment(1);a.dayDone=(a.dayDone||0)+1}else{u.dayKey=d;u.dayDone=1;a.dayKey=d;a.dayDone=1}
+  a.impDone=(a.impDone||0)+1;if(a.impDone>=a.impTotal){u.active=false;a.active=false}
+  updateDoc(doc(db,"ads",id),u).catch(()=>{})}
+function observeAds(els,root){const io=new IntersectionObserver(es=>es.forEach(e=>{if(!e.isIntersecting)return;io.unobserve(e.target);countAd(e.target.dataset.ad)}),{root:root||null,threshold:.6});els.forEach(c=>io.observe(c))}
+const adCover=a=>safeImg(a.img)?`<img loading="lazy" src="${a.img}">`:`<div class="tc" style="background:linear-gradient(135deg,hsl(${hue(a.id)} 65% 32%),hsl(${hue(a.id)+50} 65% 22%))">${esc((a.text||adHost(a)).slice(0,90))}</div>`;
+const adCard=a=>a?`<div class="vc" data-ad="${esc(a.id)}" onclick="A.adClick('${esc(a.id)}')"><div class="th"><span class="spb">Sponsorisé</span>${adCover(a)}</div><div class="row"><span class="av" style="width:36px;height:36px;background:var(--sf2)">📢</span><div><div class="ti">${esc(a.text||adHost(a))}</div><div class="sub">Sponsorisé · ${esc(adHost(a))}</div></div></div></div>`:"";
+const adMini=a=>a?`<div class="mr" data-ad="${esc(a.id)}" onclick="A.adClick('${esc(a.id)}')"><div class="th"><span class="spb">Sponsorisé</span>${adCover(a)}</div><div><div class="ti" style="font-size:14px">${esc(a.text||adHost(a))}</div><div class="sub">Sponsorisé · ${esc(adHost(a))}</div></div></div>`:"";
+const loadPP=()=>new Promise((ok,ko)=>{if(window.paypal)return ok();const sc=document.createElement("script");sc.src="https://www.paypal.com/sdk/js?client-id="+PP_ID+"&currency=EUR&locale=fr_FR";sc.onload=ok;sc.onerror=()=>ko(new Error("PayPal indisponible : vérifie le Client ID."));document.head.appendChild(sc)});
+async function prepAd(){
+  const text=$("at").value.trim().slice(0,150);let link=$("al").value.trim();const f=$("ai").files[0],n=S.adN;
+  if(!text&&!f)throw new Error("Ajoute une image ou un texte.");
+  if(!link)throw new Error("Ajoute le lien de ta pub.");
+  if(!/^https?:\/\//i.test(link))link="https://"+link;
+  link=safeLink(link);if(!link)throw new Error("Lien invalide.");
+  if(!(n>=AD_MIN&&n<=AD_MAX))throw new Error("Choisis entre "+AD_MIN+" et "+AD_MAX.toLocaleString("fr-FR")+" affichages.");
+  const img=f?await shrink(f,900,.6):"";
+  S.adDraft={text,link,img,n}}
+async function publishAd(order,paid,promo){
+  const d=S.adDraft;
+  await addDoc(collection(db,"ads"),{text:d.text,link:d.link,img:d.img,authorId:S.user.uid,authorName:S.me.name,impTotal:d.n,impDone:0,clicks:0,active:true,dayKey:"",dayDone:0,paid,order,promo:!!promo,createdAt:serverTimestamp()});
+  await loadAds();A.close();toast("Ta pub est en ligne 🎉");render()}
+function adUpdate(){const el=$("aprice");if(!el)return;const n=S.adN;
+  el.textContent=S.adFree?"Total : 0,00 € (code appliqué)":(n>=AD_MIN&&n<=AD_MAX?"Total : "+eur(adPrice(n)):"Entre "+AD_MIN+" et "+AD_MAX.toLocaleString("fr-FR")+" affichages");
+  const pp=$("pp"),fr=$("afree");if(pp)pp.style.display=S.adFree?"none":"";if(fr)fr.style.display=S.adFree?"":"none"}
+
+/* ---------- Défilement rapide (style shorts, en posts) ---------- */
+function slideHTML(p){
+  const imgs=(p.imgs||[]).length?p.imgs:(p.thumb?[p.thumb]:[]),bg=p.thumb||imgs[0]||"",only=!imgs.length,sv=(S.me.saved||[]).includes(p.id);
+  return `<section class="sl" data-id="${esc(p.id)}">${bg?`<img class="sbgi" src="${esc(bg)}">`:`<div class="sbgc" style="background:linear-gradient(135deg,hsl(${hue(p.id)} 65% 32%),hsl(${hue(p.id)+50} 65% 22%))"></div>`}
+  <div class="sin"><div class="smd">${imgs.length?`<div class="sim">${imgs.map(x=>`<img loading="lazy" src="${esc(x)}">`).join("")}</div>${imgs.length>1?`<span class="bd">▣ ${imgs.length}</span>`:""}`:`<div class="tc" style="background:linear-gradient(135deg,hsl(${hue(p.id)} 65% 32%),hsl(${hue(p.id)+50} 65% 22%))">${esc((p.title||p.text||"").slice(0,220))}</div>`}</div>
+   <div class="sif"><div style="display:flex;align-items:center;gap:8px;cursor:pointer" onclick="A.profile('${esc(p.authorId)}')">${av(p.authorId,36)}<b>${esc(nm(p.authorId,p.authorName))}</b></div>
+    ${only?"":`${p.title?`<div class="ti">${esc(p.title)}</div>`:""}${p.text?`<div class="sx">${esc(p.text.slice(0,160))}</div>`:""}`}</div>
+   <div class="sact"><button class="sb lk ${S.likes.has(p.id)?"on":""}" data-id="${esc(p.id)}" onclick="A.like('${esc(p.id)}')"><span>♥</span><small>${fmt(p.likes)}</small></button>
+    <button class="sb" onclick="A.open('${esc(p.id)}')"><span>💬</span><small>${fmt(p.comments)}</small></button>
+    <button class="sb" onclick="A.share('${esc(p.id)}')"><span>↗</span></button>
+    <button class="sb sv ${sv?"on":""}" data-id="${esc(p.id)}" onclick="A.save('${esc(p.id)}')"><span>🔖</span></button></div></div></section>`}
+function adSlide(a){if(!a)return"";const bg=safeImg(a.img)?a.img:"";
+  return `<section class="sl" data-ad="${esc(a.id)}">${bg?`<img class="sbgi" src="${bg}">`:`<div class="sbgc" style="background:linear-gradient(135deg,hsl(${hue(a.id)} 65% 32%),hsl(${hue(a.id)+50} 65% 22%))"></div>`}
+  <div class="sin"><div class="smd"><span class="spb">Sponsorisé</span>${bg?`<div class="sim"><img src="${bg}"></div>`:`<div class="tc" style="background:linear-gradient(135deg,hsl(${hue(a.id)} 65% 32%),hsl(${hue(a.id)+50} 65% 22%))">${esc((a.text||adHost(a)).slice(0,220))}</div>`}</div>
+   <div class="sif">${bg&&a.text?`<div class="ti">${esc(a.text)}</div>`:""}<div class="sx">${esc(adHost(a))}</div><button class="pri" style="margin-top:10px" onclick="A.adClick('${esc(a.id)}')">En savoir plus ↗</button></div></div></section>`}
+function fitSwipe(){const sw=$("sw");if(!sw)return;sw.style.height=Math.max(300,innerHeight-sw.getBoundingClientRect().top)+"px"}
+function swipeUI(){
+  document.querySelectorAll(".sb.lk").forEach(b=>{const p=S.posts.find(x=>x.id===b.dataset.id);if(!p)return;b.classList.toggle("on",S.likes.has(p.id));b.querySelector("small").textContent=fmt(p.likes)});
+  document.querySelectorAll(".sb.sv").forEach(b=>b.classList.toggle("on",(S.me.saved||[]).includes(b.dataset.id)))}
+const redraw=()=>S.view.t==="swipe"?swipeUI():renderPost();
+function renderSwipe(){
+  const list=visible().slice(0,50),pk=adPicker();let h="";
+  list.forEach((p,i)=>{h+=slideHTML(p);if((i+1)%4===0||(i===list.length-1&&list.length<4))h+=adSlide(pk())});
+  $("ct").innerHTML=`<div class="sw" id="sw">${h||`<div class="empty">Rien à voir ici pour l'instant.<br><button class="pri" onclick="A.compose()">Publier un post</button></div>`}</div><div class="snav"><button onclick="A.snap(-1)">▲</button><button onclick="A.snap(1)">▼</button></div>`;
+  const sw=$("sw");fitSwipe();
+  const io=new IntersectionObserver(es=>es.forEach(e=>{if(!e.isIntersecting)return;io.unobserve(e.target);const t=e.target.dataset;
+    if(t.ad)return countAd(t.ad);
+    const p=S.posts.find(x=>x.id===t.id);if(!p||p.authorId===S.user.uid)return;
+    if(once("v_"+t.id)){p.views=(p.views||0)+1;updateDoc(doc(db,"posts",t.id),{views:increment(1)}).catch(()=>{});boost(p.tags,1)}
+    if(once("i_"+t.id))updateDoc(doc(db,"posts",t.id),{impressions:increment(1)}).catch(()=>{})}),{root:sw,threshold:.6});
+  sw.querySelectorAll(".sl").forEach(c=>io.observe(c))}
 
 /* ---------- Écrans ---------- */
 function authHTML(){return `<div class="auth"><div class="logo" style="font-size:42px">PIDE Post</div>
@@ -208,14 +304,14 @@ function termsHTML(){return `<div class="auth"><div class="logo" style="font-siz
   <p><b>1. Contenu.</b> Tu ne publies que des photos et du texte que tu as le droit de partager. Vidéos et sons sont interdits.</p>
   <p><b>2. Respect.</b> Pas de haine, harcèlement, contenu illégal, spam ou usurpation d'identité. Les contenus abusifs peuvent être supprimés.</p>
   <p><b>3. Données.</b> Pseudo, photo de profil, publications, likes, abonnements et statistiques de vues sont stockés (Firebase/Google) pour faire fonctionner le service et personnaliser tes recommandations.</p>
-  <p><b>4. Publicité.</b> PIDE Post affiche des publicités ; des services tiers peuvent utiliser des cookies.</p>
+  <p><b>4. Publicité.</b> Les publicités « Sponsorisé » sont créées et payées par des membres ; chaque annonceur est responsable de sa pub.</p>
   <p><b>5. Responsabilité.</b> Tu es responsable de ce que tu publies et tu peux supprimer tes posts à tout moment.</p></div>
   <label style="display:flex;gap:8px;text-align:left;align-items:flex-start"><input type="checkbox" id="ok" style="width:auto;margin-top:3px">J'ai lu et j'accepte les conditions légales et la politique de confidentialité.</label>
   <div class="err" id="err">${esc(S.err||"")}</div>
   <button class="pri" onclick="A.accept()">Accepter et continuer</button> <button class="btn" onclick="A.out()">Refuser</button></div>`}
 
 function render(){
-  S.adUsed=false;const a=$("app");if(L&&!L.host&&S.view.t!=="live")leaveLive();
+  const a=$("app");if(L&&!L.host&&S.view.t!=="live")leaveLive();
   if(!S.user)return a.innerHTML=authHTML();
   if(S.boot)return a.innerHTML=`<div class="auth"><div class="logo" style="font-size:30px">Oups</div><p class="err">${esc(S.boot)}</p><button class="pri" onclick="boot(auth.currentUser)">Réessayer</button> <button class="btn" onclick="A.out()">Se déconnecter</button></div>`;
   if(!S.me)return a.innerHTML=termsHTML();
@@ -225,11 +321,13 @@ function render(){
     <div class="search"><input placeholder="Rechercher un post, un #hashtag, un auteur…" value="${esc(S.q)}" onkeydown="if(event.key==='Enter')A.search(this.value)"></div>
     <button class="btn" style="background:#ff2b5c;color:#fff" onclick="A.liveModal()">🔴 Live</button><button class="pri" onclick="A.compose()">+ Créer</button><span class="bell" onclick="A.notifs()">🔔${un?`<b>${un}</b>`:""}</span><span style="cursor:pointer" onclick="A.profile('${S.user.uid}')">${av(S.user.uid,34)}</span></div>
     <div class="lay"><nav class="side">${nav.map(n=>`<div class="ni ${S.view.t==="feed"&&S.tab===n[0]?"on":""}" onclick="A.go('${n[0]}')"><span>${n[1]}</span>${n[2]}</div>`).join("")}
+    <div class="ni ${S.view.t==="swipe"?"on":""}" onclick="A.swipe()"><span>⚡</span>Défilement</div>
+    <div class="ni adbtn" onclick="A.adModal()"><span>📢</span>Mettre une pub</div>
     <div class="ni ${S.view.t==="profile"&&S.view.uid===S.user.uid?"on":""}" onclick="A.profile('${S.user.uid}')"><span>👤</span>Mon profil</div>
     <div class="ni ${S.view.t==="settings"?"on":""}" onclick="A.settings()"><span>⚙️</span>Paramètres</div>
     ${fl.length?`<h4 class="fl">Mes abonnements</h4>`+fl.map(id=>`<div class="ni fl" onclick="A.profile('${id}')">${av(id,24)}<span>${esc(nm(id))}</span></div>`).join(""):""}</nav>
-    <main class="ct" id="ct"></main></div><div id="modal"></div>`;
-  ({feed:renderFeed,post:renderPost,profile:renderProfile,settings:renderSettings,notifs:renderNotifs,live:renderLive})[S.view.t]()}
+    <main class="ct${S.view.t==="swipe"?" np":""}" id="ct"></main></div><div id="modal"></div>`;
+  ({feed:renderFeed,post:renderPost,profile:renderProfile,settings:renderSettings,notifs:renderNotifs,live:renderLive,swipe:renderSwipe})[S.view.t]()}
 
 function cover(p){
   const t=p.title||p.text||"";
@@ -241,13 +339,13 @@ function cardHTML(p){
     <div><div class="ti">${esc(p.title||p.text||"Photo")}</div><div class="sub">${esc(nm(p.authorId,p.authorName))}</div>
     <div class="sub">${fmt(p.views)} vues · ${ago(p.createdAt)} · ♥ ${fmt(p.likes)}</div></div></div></div>`}
 const liveCard=(id,l)=>`<div class="vc" onclick="A.joinLive('${id}')"><div class="th"><div class="tc" style="background:linear-gradient(135deg,#ff2b5c,#7a1fff);color:#fff">🔴 EN DIRECT<br>${esc((l.title||"").slice(0,60))}</div><span class="bd l" style="background:#ff2b5c">LIVE</span><span class="bd">👁 ${l.n||0}</span></div><div class="row"><span>${av(l.hostId)}</span><div><div class="ti">${esc(l.title)}</div><div class="sub">${esc(nm(l.hostId,l.hostName))}</div><div class="sub">${l.n||0} spectateur${l.n>1?"s":""} · en direct</div></div></div></div>`;
-const gridHTML=(l,lv)=>{const lc=lv?Object.entries(S.lives).map(([id,x])=>liveCard(id,x)).join(""):"";
-  return l.length||lc?`<div class="gr">${lc}${l.map((p,i)=>cardHTML(p)+(i===4?adSlot():"")).join("")}</div>`:`<div class="empty">Rien à voir ici pour l'instant.<br><button class="pri" onclick="A.compose()">Publier un post</button></div>`};
+const gridHTML=(l,lv)=>{const pk=adPicker(),lc=lv?Object.entries(S.lives).map(([id,x])=>liveCard(id,x)).join(""):"";
+  return l.length||lc?`<div class="gr">${lc}${l.map((p,i)=>cardHTML(p)+((i===3||(i>3&&(i-3)%10===0))?adCard(pk()):"")).join("")}</div>`:`<div class="empty">Rien à voir ici pour l'instant.<br><button class="pri" onclick="A.compose()">Publier un post</button></div>`};
 function afterGrid(){
   const io=new IntersectionObserver(es=>es.forEach(e=>{if(!e.isIntersecting)return;io.unobserve(e.target);
     const id=e.target.dataset.id;if(id&&once("i_"+id)){const p=S.posts.find(x=>x.id===id);
       if(p&&p.authorId!==S.user.uid)updateDoc(doc(db,"posts",id),{impressions:increment(1)}).catch(()=>{})}}),{threshold:.6});
-  document.querySelectorAll(".vc[data-id]").forEach(c=>io.observe(c));injectAd()}
+  document.querySelectorAll(".vc[data-id]").forEach(c=>io.observe(c));observeAds(document.querySelectorAll(".vc[data-ad]"))}
 
 function renderFeed(){
   $("ct").innerHTML=`<div class="chips">${CATS.map(c=>`<button class="chip ${S.cat===c?"on":""}" onclick="A.cat('${c}')">${c}</button>`).join("")}${S.tag?`<button class="chip on" onclick="A.filter(null)">#${esc(S.tag)} ✕</button>`:""}</div>${S.tag?"":tagRow()}${gridHTML(visible(),1)}`;
@@ -278,7 +376,7 @@ const cmHTML=l=>l.length?l.map(c=>`<div class="cm"><span onclick="A.profile('${c
 function renderPost(){
   const p=S.posts.find(x=>x.id===S.view.id);if(!p){S.view={t:"feed"};return render()}
   const imgs=p.imgs||[],gi=Math.min(S.gi,imgs.length-1),own=p.authorId===S.user.uid,fl=S.follows.has(p.authorId);const sv=(S.me.saved||[]).includes(p.id),cmOn=S.users[p.authorId]?.settings?.comments!==false;
-  const rec=S.posts.filter(x=>x.id!==p.id&&!x.liveOn).sort((a,b)=>score(b)-score(a)).slice(0,8);
+  const pk=adPicker(),rec=S.posts.filter(x=>x.id!==p.id&&!x.liveOn).sort((a,b)=>score(b)-score(a)).slice(0,8);
   const desc=esc(p.text).replace(/#([\p{L}\p{N}_]{2,30})/gu,(m,t)=>`<span class="tag" onclick="A.filter('${t.toLowerCase()}')">${m}</span>`);
   const d=p.createdAt?.toDate?.().toLocaleDateString("fr-FR",{day:"numeric",month:"long",year:"numeric"})||"";
   $("ct").innerHTML=`<div class="wt"><div>
@@ -294,9 +392,9 @@ function renderPost(){
     <h3 style="margin-top:24px">${fmt(p.comments)} commentaire${p.comments>1?"s":""}</h3>
     ${cmOn?`<div class="cm">${av(S.user.uid,34)}<div style="flex:1"><input id="ct2" maxlength="500" placeholder="Ajouter un commentaire…" onkeydown="if(event.key==='Enter')A.comment('${p.id}')"><button class="pri" onclick="A.comment('${p.id}')">Commenter</button></div></div>`:`<div class="sub">Les commentaires sont désactivés pour ce post.</div>`}
     <div id="cms">${S.cm[p.id]?cmHTML(S.cm[p.id]):""}</div></div>
-    <aside><h4 style="margin:0 0 12px;color:var(--mu)">À voir ensuite</h4>${rec.map((r,i)=>`<div class="mr" data-id="${r.id}" onclick="A.open('${r.id}')"><div class="th">${cover(r)}</div><div><div class="ti" style="font-size:14px">${esc(r.title||r.text||"Photo")}</div><div class="sub">${esc(nm(r.authorId,r.authorName))}</div><div class="sub">${fmt(r.views)} vues · ♥ ${fmt(r.likes)}</div></div></div>`+(i===2?adSlot():"")).join("")}</aside></div>`;
+    <aside><h4 style="margin:0 0 12px;color:var(--mu)">À voir ensuite</h4>${rec.map((r,i)=>`<div class="mr" data-id="${r.id}" onclick="A.open('${r.id}')"><div class="th">${cover(r)}</div><div><div class="ti" style="font-size:14px">${esc(r.title||r.text||"Photo")}</div><div class="sub">${esc(nm(r.authorId,r.authorName))}</div><div class="sub">${fmt(r.views)} vues · ♥ ${fmt(r.likes)}</div></div></div>`+(i===2?adMini(pk()):"")).join("")}</aside></div>`;
   if(!S.cm[p.id])A.loadCm(p.id);
-  injectAd()}
+  observeAds(document.querySelectorAll("[data-ad]"))}
 
 function renderSettings(){
   const s=S.me.settings||{},u=auth.currentUser,uid=S.user.uid,top=Object.entries(S.me.tagWeights||{}).sort((a,b)=>b[1]-a[1]).slice(0,10),h=S.me.bannerHue??hue(uid);
@@ -311,11 +409,12 @@ function renderSettings(){
    <div class="sr"><span>Couleur d'accent</span><span>${ac.map(c=>`<span class="dot ${(s.accent||ac[0])===c?"on":""}" style="background:${c}" onclick="A.pref('accent','${c}')"></span>`).join(" ")}</span></div></div>
   <div class="sc"><h3>Confidentialité</h3>${sw("comments","Autoriser les commentaires sur mes posts",s.comments!==false)}${sw("showFollowers","Afficher mon nombre d'abonnés",s.showFollowers!==false)}</div>
   <div class="sc"><h3>Recommandations</h3><div class="sub">Tes centres d'intérêt appris :</div><div class="meta">${top.length?top.map(t=>`<span class="mc">#${esc(t[0])}</span>`).join(""):`<span class="sub">Rien encore : like et commente des posts.</span>`}</div><button class="btn" onclick="A.resetReco()">Réinitialiser mes recommandations</button></div>
+  <div class="sc"><h3>Mes publicités</h3><div id="myads"><span class="sub">Chargement…</span></div><button class="pri" style="margin-top:12px" onclick="A.adModal()">📢 Mettre une pub</button></div>
   <div class="sc"><h3>Compte</h3><div class="sr"><span>Email</span><span class="sub">${esc(u.email||"Compte Google")}</span></div>
    <div class="sr"><span>Mot de passe</span><button class="btn" onclick="A.resetPw()">Envoyer un email de réinitialisation</button></div>
    <div class="sr"><span>Mes données</span><button class="btn" onclick="A.exportData()">Télécharger (JSON)</button></div>
    <div class="sr"><span>Session</span><button class="btn" onclick="A.out()">Se déconnecter</button></div>
-   <div class="sr"><span>Supprimer mon compte et mes posts</span><button class="dg" onclick="A.delAccount()">Supprimer</button></div></div></div>`}
+   <div class="sr"><span>Supprimer mon compte et mes posts</span><button class="dg" onclick="A.delAccount()">Supprimer</button></div></div></div>`;A.loadMyAds()}
 function renderNotifs(){
   const T={like:"a aimé ton post",comment:"a commenté ton post",follow:"s'est abonné à toi"};
   $("ct").innerHTML=`<div style="max-width:680px"><h2 style="margin-top:0">🔔 Notifications</h2>${S.notifs.length?S.notifs.map(n=>`<div class="nt ${n.read?"":"un"}" onclick="${n.pid?`A.open('${n.pid}')`:`A.profile('${n.from}')`}">${av(n.from,40)}<div><b>${esc(nm(n.from))}</b> ${T[n.type]||""}<div class="sub">${ago(n.createdAt)}</div></div></div>`).join(""):`<div class="empty">Aucune notification pour l'instant.</div>`}</div>`}
@@ -447,6 +546,44 @@ window.boot=boot;window.auth=auth;
 const A=window.A={
   go(t){history.replaceState(null,"",location.pathname);S.view={t:"feed"};S.tab=t;S.q="";S.tag=null;S.cat="Tout";loadFeed().then(render).catch(render)},
   cat(c){S.cat=c;renderFeed()},
+  swipe(){history.replaceState(null,"",location.pathname);S.tab="foryou";S.cat="Tout";S.tag=null;S.q="";S.view={t:"swipe"};
+    const go=()=>{render();scrollTo(0,0)};loadFeed().then(go).catch(go)},
+  snap(d){const sw=$("sw");if(sw)sw.scrollBy({top:d*sw.clientHeight,behavior:"smooth"})},
+  adClick(id){const a=S.ads.find(x=>x.id===id),l=a&&safeLink(a.link);if(!l)return;
+    if(a.authorId!==S.user.uid&&once("ac_"+id)){a.clicks=(a.clicks||0)+1;updateDoc(doc(db,"ads",id),{clicks:increment(1)}).catch(()=>{})}
+    window.open(l,"_blank","noopener,noreferrer")},
+  adN(v,fi){const n=Math.floor(+v)||0;S.adN=n;document.querySelectorAll("[data-n]").forEach(b=>b.classList.toggle("on",+b.dataset.n===n));if(!fi&&$("an"))$("an").value=n;adUpdate()},
+  adPrev(i){$("apv").innerHTML=[...i.files].slice(0,1).map(f=>`<img src="${URL.createObjectURL(f)}">`).join("")},
+  async adCode(){S.adFree=await codeOK();adUpdate()},
+  async adFree(){const b=$("afree");if(!await codeOK())return showErr("Code invalide.");
+    b.disabled=true;try{await prepAd();await publishAd("CODE",0,true)}catch(e){showErr(errMsg(e));b.disabled=false}},
+  adModal(){S.adN=1000;S.adFree=false;S.adDraft=null;
+    $("modal").innerHTML=`<div class="modal"><div class="box"><h3 style="margin-top:0">📢 Mettre une pub</h3>
+    <div class="sub">Ta pub s'affiche en « Sponsorisé » dans le fil et le défilement rapide. Elle est diffusée progressivement, pas d'un coup.</div>
+    <label class="btn" style="display:inline-block;margin:10px 0 0">🖼 Image<input id="ai" type="file" accept="image/*" hidden onchange="A.adPrev(this)"></label><div class="prev" id="apv"></div>
+    <textarea id="at" rows="3" maxlength="150" placeholder="Texte de ta pub (150 caractères max)"></textarea>
+    <input id="al" placeholder="🔗 Lien de ta pub (https://…)">
+    <div class="sub" style="margin-top:8px">Nombre d'affichages · 2 € les 100</div>
+    <div class="chips" style="padding:6px 0">${[100,500,1000,5000,10000].map(n=>`<button type="button" class="chip" data-n="${n}" onclick="A.adN(${n})">${n.toLocaleString("fr-FR")}</button>`).join("")}</div>
+    <input id="an" type="number" min="${AD_MIN}" max="${AD_MAX}" step="100" value="1000" oninput="A.adN(this.value,1)">
+    <div id="aprice" style="font-weight:800;font-size:18px;margin:8px 0"></div>
+    <input id="ac" placeholder="Code de réduction (optionnel)" autocomplete="off" oninput="A.adCode()">
+    <div class="err" id="err"></div>
+    <div id="pp"></div><button class="pri" id="afree" style="display:none;width:100%" onclick="A.adFree()">Publier gratuitement</button>
+    <button class="btn" style="margin-top:10px" onclick="A.close()">Annuler</button></div></div>`;
+    A.adN(1000);
+    loadPP().then(()=>{if(!$("pp"))return;return paypal.Buttons({style:{layout:"vertical",shape:"pill",label:"pay"},
+      onClick:async(d,a)=>{showErr("");try{await prepAd();return a.resolve()}catch(e){showErr(errMsg(e));return a.reject()}},
+      createOrder:(d,a)=>a.order.create({purchase_units:[{description:"PIDE Post - pub "+S.adDraft.n+" affichages",amount:{currency_code:"EUR",value:adPrice(S.adDraft.n).toFixed(2)}}]}),
+      onApprove:async(d,a)=>{let o;try{o=await a.order.capture()}catch(e){return showErr("Paiement non finalisé : "+errMsg(e))}
+        try{await publishAd(o.id,adPrice(S.adDraft.n),false)}catch(e){showErr("Paiement reçu (commande "+o.id+") mais la pub n'a pas pu être enregistrée : "+errMsg(e)+". Garde ce numéro de commande.")}},
+      onError:e=>showErr("Paiement impossible : "+(e?.message||e))}).render("#pp")}).catch(e=>showErr(errMsg(e)))},
+  async loadMyAds(){const el=$("myads");if(!el)return;
+    try{const q=await getDocs(query(collection(db,"ads"),where("authorId","==",S.user.uid)));const l=q.docs.map(d=>({id:d.id,...d.data()})).sort((a,b)=>ms(b)-ms(a));
+      el.innerHTML=l.length?l.map(a=>`<div class="sr"><span style="min-width:0"><b>${esc((a.text||adHost(a)).slice(0,40))}</b><div class="sub">${fmt(a.impDone||0)} / ${fmt(a.impTotal)} affichages · ${fmt(a.clicks||0)} clics${a.active===false?" · terminée":""}</div></span><button class="dg" onclick="A.delAd('${esc(a.id)}')">Supprimer</button></div>`).join(""):`<div class="sub">Aucune pub pour l'instant.</div>`}
+    catch(e){el.innerHTML=`<span class="err">${esc(errMsg(e))}</span>`}},
+  async delAd(id){if(!confirm("Supprimer cette pub ? Aucun remboursement."))return;
+    try{await deleteDoc(doc(db,"ads",id));S.ads=S.ads.filter(a=>a.id!==id);A.loadMyAds()}catch(e){alert(errMsg(e))}},
   search(q){S.q=q.trim();S.view={t:"feed"};S.tab="foryou";render()},
   filter(t){S.tag=t;S.view={t:"feed"};render()},
   async out(){if(L?.host)await A.endLive(true);signOut(auth)},
@@ -513,8 +650,8 @@ const A=window.A={
     S.cm[id]=cs.docs.map(d=>d.data());if(S.view.id===id&&$("cms"))$("cms").innerHTML=cmHTML(S.cm[id])}catch(e){if($("cms"))$("cms").innerHTML=`<span class="err">${esc(errMsg(e))}</span>`}},
   async like(id){
     const p=S.posts.find(x=>x.id===id),ref=doc(db,"likes",id+"_"+S.user.uid);
-    try{if(S.likes.has(id)){S.likes.delete(id);p.likes--;renderPost();await deleteDoc(ref);updateDoc(doc(db,"posts",id),{likes:increment(-1)})}
-    else{S.likes.add(id);p.likes=(p.likes||0)+1;renderPost();await setDoc(ref,{pid:id,uid:S.user.uid});updateDoc(doc(db,"posts",id),{likes:increment(1)});boost(p.tags,3);notify(p.authorId,"like",id)}}catch(e){alert(errMsg(e))}},
+    try{if(S.likes.has(id)){S.likes.delete(id);p.likes--;redraw();await deleteDoc(ref);updateDoc(doc(db,"posts",id),{likes:increment(-1)})}
+    else{S.likes.add(id);p.likes=(p.likes||0)+1;redraw();await setDoc(ref,{pid:id,uid:S.user.uid});updateDoc(doc(db,"posts",id),{likes:increment(1)});boost(p.tags,3);notify(p.authorId,"like",id)}}catch(e){alert(errMsg(e))}},
   async vote(id,i){const p=S.posts.find(x=>x.id===id);if(S.votes[id]!==undefined)return;
     S.votes[id]=i;p.pv=p.pv||{};p.pv[i]=(p.pv[i]||0)+1;renderPost();
     try{await setDoc(doc(db,"likes","v_"+id+"_"+S.user.uid),{pid:id,uid:S.user.uid,vote:i});await updateDoc(doc(db,"posts",id),{["pv."+i]:increment(1)})}catch(e){alert(errMsg(e))}},
@@ -532,7 +669,7 @@ const A=window.A={
   settings(){S.view={t:"settings"};render();scrollTo(0,0)},
   notifs(){S.view={t:"notifs"};render();S.notifs.filter(n=>!n.read).forEach(n=>{n.read=true;updateDoc(doc(db,"notifs",n.id),{read:true}).catch(()=>{})})},
   save(id){const a=S.me.saved||[],on=a.includes(id);S.me.saved=on?a.filter(x=>x!==id):[...a,id];
-    updateDoc(doc(db,"users",S.user.uid),{saved:on?arrayRemove(id):arrayUnion(id)}).catch(e=>alert(errMsg(e)));toast(on?"Retiré des enregistrés":"Post enregistré");renderPost()},
+    updateDoc(doc(db,"users",S.user.uid),{saved:on?arrayRemove(id):arrayUnion(id)}).catch(e=>alert(errMsg(e)));toast(on?"Retiré des enregistrés":"Post enregistré");redraw()},
   share(id){const u=location.origin+location.pathname+"#"+id;(navigator.clipboard?navigator.clipboard.writeText(u):Promise.reject()).then(()=>toast("Lien copié"),()=>prompt("Copie le lien :",u))},
   async report(id){const r=prompt("Pourquoi signaler ce post ? (spam, haine, contenu illégal…)");if(!r)return;
     try{await addDoc(collection(db,"reports"),{pid:id,uid:S.user.uid,reason:r.slice(0,300),createdAt:serverTimestamp()});toast("Signalement envoyé, merci")}catch(e){alert(errMsg(e))}},
@@ -606,6 +743,9 @@ const A=window.A={
     t.stop();L[k+"Track"]=null;L[k+"Stream"]=null;updateDoc(lref(L.id),{[k+"Sid"]:null}).catch(()=>{});drawVideo();toast(k==="scr"?"Partage d'écran arrêté":"Caméra coupée")},
   layout(v){if(L?.host)updateDoc(lref(L.id),{layout:v}).catch(()=>{})}
 };
+addEventListener("resize",fitSwipe);
+addEventListener("keydown",e=>{if(S.view?.t!=="swipe"||/INPUT|TEXTAREA|SELECT/.test(document.activeElement?.tagName||""))return;
+  if(e.key==="ArrowDown"||e.key==="PageDown"){e.preventDefault();A.snap(1)}else if(e.key==="ArrowUp"||e.key==="PageUp"){e.preventDefault();A.snap(-1)}});
 addEventListener("pagehide",()=>{if(L?.host)updateDoc(lref(L.id),{liveOn:false}).catch(()=>{})});
 </script>
 </body>
