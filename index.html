@@ -127,24 +127,7 @@ body.light{--bg:#f3f3fa;--sf:#fff;--sf2:#e4e4f0;--tx:#15151f;--mu:#62627a}
 .snav button{width:44px;height:44px;border-radius:50%;border:0;background:var(--sf2);cursor:pointer;font-size:18px}
 @media(max-width:860px){.snav{display:none}}
 .adbtn{color:var(--c2);font-weight:700}
-.stage.v{width:min(100%,calc(80vh*9/16));aspect-ratio:9/16;margin:0 auto}
 #inter img{width:100%;max-height:60vh;object-fit:contain;display:block}
-.sl .vcol{width:min(100%,calc((100dvh - 56px)*9/16))}
-.vfs{position:fixed;inset:0;z-index:30;background:#000;color:#fff}
-.vcol{position:absolute;top:0;bottom:0;left:50%;transform:translateX(-50%);width:min(100vw,calc(100dvh*9/16));overflow:hidden;background:#000}
-.vcol{display:flex;flex-direction:column}
-.stage.vf{position:relative;flex:none;width:100%;aspect-ratio:16/9;border-radius:0;margin:0}
-.vup{flex:1;min-height:0;overflow:auto}
-.vtop{display:flex;gap:8px;align-items:center;padding:12px}
-.vtop .onair,.vtop .mst{position:static}
-.vinfo{display:flex;gap:8px;align-items:center;padding:0 12px 8px}
-.vpoll{padding:0 12px}.vpoll .poll{background:#1a1a26;color:#fff}
-.vdn{flex:1;min-height:0;display:flex;flex-direction:column;padding:8px 12px 12px}
-.vdn .msgs{flex:1;min-height:0;overflow:auto}
-.vdn .msg{margin:4px 0;font-size:13px}
-.vb{width:40px;height:40px}
-.vside{display:flex;gap:8px;flex-wrap:wrap;justify-content:center;margin:8px 0}
-.vdn input{background:#1a1a26;border-color:#fff3;color:#fff;margin:0;border-radius:22px}
 #inter .tc{width:100%;min-height:220px;display:flex}
 </style>
 </head>
@@ -343,12 +326,12 @@ function termsHTML(){return `<div class="auth"><div class="logo" style="font-siz
   <button class="pri" onclick="A.accept()">Accepter et continuer</button> <button class="btn" onclick="A.out()">Refuser</button></div>`}
 
 function render(){
-  const a=$("app");if(L&&!L.host&&S.view.t!=="live"&&S.view.t!=="lswipe")leaveLive();
+  const a=$("app");if(L&&!L.host&&S.view.t!=="live")leaveLive();
   if(!S.user)return a.innerHTML=authHTML();
   if(S.boot)return a.innerHTML=`<div class="auth"><div class="logo" style="font-size:30px">Oups</div><p class="err">${esc(S.boot)}</p><button class="pri" onclick="boot(auth.currentUser)">Réessayer</button> <button class="btn" onclick="A.out()">Se déconnecter</button></div>`;
   if(!S.me)return a.innerHTML=termsHTML();
-  const nav=[["home","🏠","Accueil (lives)"],["foryou","⚡","Défilement"],["lswipe","📺","Défilement live"],["trend","🔥","Tendances"],["recent","🕒","Récents"],["follow","👥","Abonnements"],["saved","🔖","Enregistrés"]];
-  const navOn=k=>k==="home"?S.view.t==="feed":k==="lswipe"?S.view.t==="lswipe":S.view.t==="swipe"&&S.tab===k;
+  const nav=[["home","🏠","Accueil (lives)"],["foryou","⚡","Défilement"],["trend","🔥","Tendances"],["recent","🕒","Récents"],["follow","👥","Abonnements"],["saved","🔖","Enregistrés"]];
+  const navOn=k=>k==="home"?S.view.t==="feed":S.view.t==="swipe"&&S.tab===k;
   const fl=[...S.follows].filter(id=>S.users[id]).slice(0,8),un=S.notifs.filter(n=>!n.read).length;applyTheme();
   a.innerHTML=`<div class="top"><span class="logo" onclick="A.home()">PIDE Post</span>
     <div class="search"><input placeholder="Rechercher un post, un #hashtag, un auteur…" value="${esc(S.q)}" onkeydown="if(event.key==='Enter')A.search(this.value)"></div>
@@ -358,8 +341,8 @@ function render(){
     <div class="ni ${S.view.t==="profile"&&S.view.uid===S.user.uid?"on":""}" onclick="A.profile('${S.user.uid}')"><span>👤</span>Mon profil</div>
     <div class="ni ${S.view.t==="settings"?"on":""}" onclick="A.settings()"><span>⚙️</span>Paramètres</div>
     ${fl.length?`<h4 class="fl">Mes abonnements</h4>`+fl.map(id=>`<div class="ni fl" onclick="A.profile('${id}')">${av(id,24)}<span>${esc(nm(id))}</span></div>`).join(""):""}</nav>
-    <main class="ct${["swipe","lswipe"].includes(S.view.t)?" np":""}" id="ct"></main></div><div id="modal"></div>`;
-  ({feed:renderFeed,post:renderPost,profile:renderProfile,settings:renderSettings,notifs:renderNotifs,live:renderLive,swipe:renderSwipe,lswipe:renderLiveSwipe})[S.view.t]()}
+    <main class="ct${S.view.t==="swipe"?" np":""}" id="ct"></main></div><div id="modal"></div>`;
+  ({feed:renderFeed,post:renderPost,profile:renderProfile,settings:renderSettings,notifs:renderNotifs,live:renderLive,swipe:renderSwipe})[S.view.t]()}
 
 function cover(p){
   const t=p.title||p.text||"";
@@ -370,7 +353,7 @@ function cardHTML(p){
     <div class="row"><span onclick="event.stopPropagation();A.profile('${p.authorId}')">${av(p.authorId)}</span>
     <div><div class="ti">${esc(p.title||p.text||"Photo")}</div><div class="sub">${esc(nm(p.authorId,p.authorName))}</div>
     <div class="sub">${fmt(p.views)} vues · ${ago(p.createdAt)} · ♥ ${fmt(p.likes)}</div></div></div></div>`}
-const liveCard=(id,l)=>`<div class="vc" onclick="A.joinLive('${id}')"><div class="th"><div class="tc" style="background:linear-gradient(135deg,#ff2b5c,#7a1fff);color:#fff">${l.vert?"📱 ":""}🔴 EN DIRECT<br>${esc((l.title||"").slice(0,60))}</div><span class="bd l" style="background:#ff2b5c">LIVE</span><span class="bd">👁 ${l.n||0}</span></div><div class="row"><span>${av(l.hostId)}</span><div><div class="ti">${esc(l.title)}</div><div class="sub">${esc(nm(l.hostId,l.hostName))}</div><div class="sub">${l.n||0} spectateur${l.n>1?"s":""} · en direct</div></div></div></div>`;
+const liveCard=(id,l)=>`<div class="vc" onclick="A.joinLive('${id}')"><div class="th"><div class="tc" style="background:linear-gradient(135deg,#ff2b5c,#7a1fff);color:#fff">🔴 EN DIRECT<br>${esc((l.title||"").slice(0,60))}</div><span class="bd l" style="background:#ff2b5c">LIVE</span><span class="bd">👁 ${l.n||0}</span></div><div class="row"><span>${av(l.hostId)}</span><div><div class="ti">${esc(l.title)}</div><div class="sub">${esc(nm(l.hostId,l.hostName))}</div><div class="sub">${l.n||0} spectateur${l.n>1?"s":""} · en direct</div></div></div></div>`;
 const gridHTML=(l,lv)=>{const pk=adPicker(),lc=lv?Object.entries(S.lives).map(([id,x])=>liveCard(id,x)).join(""):"";
   return l.length||lc?`<div class="gr">${lc}${l.map((p,i)=>cardHTML(p)+((i===Math.min(3,l.length-1)||(i>3&&(i-3)%10===0))?adCard(pk()):"")).join("")}</div>`:`<div class="empty">Rien à voir ici pour l'instant.<br><button class="pri" onclick="A.compose()">Publier un post</button></div>`};
 function afterGrid(){
@@ -467,9 +450,7 @@ function applyLives(){
     if(S.user&&x.authorId===S.user.uid&&(!L||L.id!==id)&&now-bm(x)>3e5)deleteDoc(lref(id)).catch(()=>{});
     if(now-bm(x)<9e4)v[id]={...x,hostId:x.authorId,hostName:x.authorName}});
   const sig=JSON.stringify(Object.entries(v).map(([k,x])=>[k,x.n||0,x.title]));S.lives=v;
-  if(sig!==S.lsig){S.lsig=sig;if(S.me&&S.view.t==="feed")renderFeed()}
-  const sig2=JSON.stringify(Object.entries(v).filter(([k,x])=>x.vert).map(([k,x])=>[k,x.title]));
-  if(sig2!==S.lsig2){S.lsig2=sig2;if(S.me&&S.view.t==="lswipe"&&!L&&!$("sw")?.dataset.lock)renderLiveSwipe()}}
+  if(sig!==S.lsig){S.lsig=sig;if(S.me&&S.view.t==="feed")renderFeed()}}
 function watchLives(){if(S.lw)return;S.lw=1;
   onSnapshot(query(collection(db,"posts"),where("liveOn","==",true)),sn=>{S.liveRaw={};sn.docs.forEach(d=>S.liveRaw[d.id]=d.data());applyLives()},e=>console.warn("lives",e));
   setInterval(applyLives,15000)}
@@ -514,23 +495,20 @@ function listenLive(id){
 /* --- côté spectateur --- */
 async function joinLive(id){
   const l=S.lives[id];if(!l)return;
-  const sw=S.view.t==="lswipe",warn=m=>sw?toast(m):alert(m);
-  if(L&&L.id===id){if(sw)return;S.view={t:"live",id};return render()}
+  if(L&&L.id===id){S.view={t:"live",id};return render()}
   if(l.hostId===S.user.uid)return;
-  if((l.n||0)>=MAX_VIEWERS)return warn("Ce live est complet ("+MAX_VIEWERS+" spectateurs max).");
-  if(L?.host)return warn("Termine d'abord ton propre live.");
+  if((l.n||0)>=MAX_VIEWERS)return alert("Ce live est complet ("+MAX_VIEWERS+" spectateurs max).");
+  if(L?.host)return alert("Termine d'abord ton propre live.");
   if(L)leaveLive();S.liveSeen=true;
   const uid=S.user.uid,pc=new RTCPeerConnection(ICE),au=new Audio();au.autoplay=true;
   L={id,host:false,un:[],msgs:[],t0:Date.now(),info:l,pc,audio:au};
-  if(sw){const el=document.querySelector('.sl[data-live="'+id+'"]');if(!el){leaveLive();return}el.classList.add("on");el.innerHTML=liveVHTML(l,false,S.follows.has(l.hostId),true);liveVInit()}
-  else{S.view={t:"live",id};render()}
-  listenLive(id);
+  S.view={t:"live",id};render();listenLive(id);
   pc.ontrack=e=>{if(!L)return;if(e.track.kind==="audio"){au.srcObject=e.streams[0];au.play().catch(()=>{})}else{(L.rs=L.rs||{})[e.streams[0].id]=e.streams[0];drawVideo()}};
-  try{await updateDoc(lref(id),{["rtc."+uid]:{j:Date.now()}})}catch(e){toast("Connexion au live impossible");return liveGone()}
+  try{await updateDoc(lref(id),{["rtc."+uid]:{j:Date.now()}})}catch(e){toast("Connexion au live impossible");leaveLive();S.view={t:"feed"};return render()}
   if(!L||L.id!==id)return;
   L.un.push(onSnapshot(lref(id),async sn=>{
     if(!L||L.id!==id)return;
-    if(!sn.exists()||!sn.data().liveOn){toast("Le live est terminé");return liveGone()}
+    if(!sn.exists()||!sn.data().liveOn){toast("Le live est terminé");leaveLive();S.view={t:"feed"};return render()}
     const d=sn.data();L.info={...d,hostId:d.authorId,hostName:d.authorName};L.poll=d.lpoll||null;L.votes=d.lvotes||{};drawMic();drawVideo();drawPoll();
     const o=d.rtc?.[uid]?.o;
     if(o&&o.rev!==pc._rev){pc._rev=o.rev;
@@ -554,8 +532,8 @@ function drawVideo(){const c=$("agv");if(!c||!L)return;
   const both=cam&&scr,mode=I.layout||"pip",main=both?(mode==="cam"?cam:scr):(cam||scr),pip=both&&mode==="pip"?cam:null;
   let vm=$("vmain");
   if(!main)vm?.remove();
-  else{if(!vm){vm=document.createElement("video");vm.id="vmain";vm.autoplay=true;vm.muted=true;vm.playsInline=true;vm.style.cssText=`position:absolute;inset:0;width:100%;height:100%;object-fit:${I.vert?"cover":"contain"};background:#000`;c.prepend(vm)}
-    vm.style.objectFit="contain";if(vm.srcObject!==main)vm.srcObject=main;vm.play().catch(()=>{})}
+  else{if(!vm){vm=document.createElement("video");vm.id="vmain";vm.autoplay=true;vm.muted=true;vm.playsInline=true;vm.style.cssText=`position:absolute;inset:0;width:100%;height:100%;object-fit:contain;background:#000`;c.prepend(vm)}
+    if(vm.srcObject!==main)vm.srcObject=main;vm.play().catch(()=>{})}
   let pw=$("vpip");
   if(!pip)pw?.remove();
   else{const P=I.pip||{x:70,y:66,w:26};
@@ -573,9 +551,8 @@ function renderLive(){
   const id=S.view.id,l=L&&L.id===id?(S.lives[id]||L.info):null;
   if(!l){S.view={t:"feed"};return render()}
   const host=L.host,fl=S.follows.has(l.hostId);
-  if(l.vert)return renderLiveV(l,host,fl);
   $("ct").innerHTML=`<div class="lv"><div>
-   <div class="stage${l.vert?" v":""}" id="stage"><div id="agv" style="position:absolute;inset:0;z-index:0"></div><span class="onair">🔴 EN DIRECT</span><span class="mst" id="mic"></span></div>
+   <div class="stage" id="stage"><div id="agv" style="position:absolute;inset:0;z-index:0"></div><span class="onair">🔴 EN DIRECT</span><span class="mst" id="mic"></span></div>
    <h2 class="h1" style="margin:14px 0 0">${esc(l.title)}</h2>
    <div class="ab"><span>${av(l.hostId,44)}</span><div><b>${esc(nm(l.hostId,l.hostName))}</b><div class="sub" id="ln"></div></div><span class="sp"></span>
    ${host?`<button class="btn" onclick="A.mic()">🎙️ Micro</button><button class="btn" id="bcam" onclick="A.toggleCam()">📷 Caméra</button><button class="btn" id="bscr" onclick="A.toggleScr()">🖥 Écran</button><select style="width:auto;margin:0" title="Affichage" onchange="A.layout(this.value)"><option value="pip" ${l.layout!=="cam"&&l.layout!=="scr"?"selected":""}>Écran + petite cam</option><option value="cam" ${l.layout==="cam"?"selected":""}>Cam en grand</option><option value="scr" ${l.layout==="scr"?"selected":""}>Écran en grand</option></select><button class="btn" onclick="A.livePoll()">📊 Sondage</button><label class="btn">🖼 Image<input type="file" accept="image/*" hidden onchange="A.liveImg(this)"></label><button class="btn" onclick="A.rmImg()">Retirer l'image</button><button class="dg" onclick="A.endLive()">Terminer</button>`
@@ -586,45 +563,9 @@ function renderLive(){
     <input id="lmsg" maxlength="200" placeholder="Écris un message…" onkeydown="if(event.key==='Enter')A.say()">${otherLives(id)}</div></div>`;
   (L.msgs||[]).forEach(addMsg);drawVideo();drawPoll();drawImg();drawMic()}
 
-/* ---------- Live vertical : plein écran, format portrait ---------- */
-function liveVHTML(l,host,fl,emb){
-  const side=host
-   ?`<button class="vb" id="bcam" onclick="A.toggleCam()">📷</button><button class="vb" id="bscr" onclick="A.toggleScr()">🖥</button><button class="vb" title="Affichage" onclick="A.cycLayout()">🔀</button><button class="vb" onclick="A.mic()">🎙️</button><button class="vb" onclick="A.livePoll()">📊</button><label class="vb">🖼<input type="file" accept="image/*" hidden onchange="A.liveImg(this)"></label><button class="vb" onclick="A.rmImg()">🚫</button>`
-   :`${["❤️","🔥","😂","👏","😮"].map(e=>`<button class="vb" onclick="A.react('${e}')">${e}</button>`).join("")}<button class="vb" onclick="A.sound()">🔊</button><button class="vb ${fl?"on":""}" onclick="A.follow('${l.hostId}')">${fl?"✓":"➕"}</button>${donInfo(l.hostId)?`<button class="vb" onclick="A.donate('${esc(l.hostId)}')">💝</button>`:""}`;
-  const inner=`<div class="vcol">
-   <div class="vup"><div class="vtop"><span class="onair">🔴 EN DIRECT</span><span class="mst" id="mic"></span><span class="mst" id="ln"></span><span style="flex:1"></span>${host?`<button class="dg" onclick="A.endLive()">Terminer</button>`:`${emb?"":`<button class="vb" title="Défilement live" onclick="A.lswipe()">📺</button>`}<button class="vb" onclick="A.home()">✕</button>`}</div>
-   <div class="vinfo">${av(l.hostId,36)}<div><b>${esc(nm(l.hostId,l.hostName))}</b><div style="font-size:13px">${esc(l.title)}</div></div></div><div class="vpoll" id="lpoll"></div></div>
-   <div class="stage vf" id="stage"><div id="agv" style="position:absolute;inset:0;z-index:0"></div></div>
-   <div class="vdn"><div class="msgs" id="lchat"></div><div class="vside">${side}</div><input id="lmsg" maxlength="200" placeholder="Écris un message…" onkeydown="if(event.key==='Enter')A.say()"></div></div>`;
-  return emb?inner:`<div class="vfs">${inner}</div>`}
-const liveVInit=()=>{(L.msgs||[]).forEach(addMsg);drawVideo();drawPoll();drawImg();drawMic()};
-function renderLiveV(l,host,fl){$("ct").innerHTML=liveVHTML(l,host,fl,false);liveVInit()}
-
-/* ---------- Défilement live, pub de transition, autres lives ---------- */
+/* ---------- Pub de transition, autres lives ---------- */
 function goSwipe(tab,keep){history.replaceState(null,"",location.pathname);S.tab=tab||"foryou";if(!keep){S.cat="Tout";S.tag=null;S.q=""}S.view={t:"swipe"};
   const go=()=>{render();scrollTo(0,0)};loadFeed().then(go).catch(go)}
-const liveSlideIn=(id,l)=>`<div class="sbgc" style="background:linear-gradient(135deg,#ff2b5c,#7a1fff)"></div><div class="sin"><div class="smd" style="flex-direction:column;text-align:center;gap:14px"><span class="bd l" style="position:static;background:#ff2b5c">🔴 EN DIRECT</span><div style="font-size:26px;font-weight:800">${esc(l.title)}</div><div>${av(l.hostId,64)}</div><b>${esc(nm(l.hostId,l.hostName))}</b><div>${l.hostId===S.user.uid?"C'est ton live":"Connexion…"}</div></div></div>`;
-const liveSlide=(id,l)=>`<section class="sl" data-live="${esc(id)}">${liveSlideIn(id,l)}</section>`;
-function renderLiveSwipe(){
-  if(L&&!L.host)leaveLive();
-  const lv=Object.entries(S.lives).filter(([id,x])=>x.vert).sort((x,y)=>(y[1].n||0)-(x[1].n||0)),pk=adPicker();let h="";
-  lv.forEach(([id,l],i)=>{h+=liveSlide(id,l);if((i+1)%3===0||(i===lv.length-1&&lv.length<3))h+=adSlide(pk())});
-  $("ct").innerHTML=`<div class="sw" id="sw">${h||`<div class="empty">Aucun live vertical en ce moment.<br><button class="pri" onclick="A.liveModal()">🔴 Lancer un live</button></div>`}</div><div class="snav"><button onclick="A.snap(-1)">▲</button><button onclick="A.snap(1)">▼</button></div>`;
-  const sw=$("sw");fitSwipe();observeAds(sw.querySelectorAll(".sl[data-ad]"),sw);swWatch(sw)}
-/* le live affiché se lance tout seul ; une pub bloque le défilement 5 secondes */
-function swWatch(sw){let tm;const act=()=>{const el=sw.children[Math.round(sw.scrollTop/sw.clientHeight)];if(!el||!el.dataset||sw._cur===el)return;sw._cur=el;swActivate(el,sw)};
-  sw.addEventListener("scroll",()=>{clearTimeout(tm);tm=setTimeout(act,80)});setTimeout(act,60)}
-function swActivate(el,sw){if(el.dataset.ad){swClear();swLock(el,sw)}else if(el.dataset.live)swPlay(el)}
-function swClear(){if(L&&!L.host)leaveLive();
-  document.querySelectorAll(".sl[data-live].on").forEach(e=>{e.classList.remove("on");const l=S.lives[e.dataset.live];if(l)e.innerHTML=liveSlideIn(e.dataset.live,l)})}
-function swPlay(el){const id=el.dataset.live;if(L&&L.id===id)return;swClear();joinLive(id)}
-function swLock(el,sw){if(el.dataset.done)return;el.dataset.done=1;sw.dataset.lock=1;sw.style.overflowY="hidden";
-  const b=document.createElement("button");b.className="btn";b.disabled=true;b.style.cssText="position:absolute;right:12px;top:12px;z-index:6";b.textContent="Suite dans 5 s";el.appendChild(b);
-  let n=5;const t=setInterval(()=>{n--;if(!document.body.contains(el))return clearInterval(t);
-    if(n>0)b.textContent="Suite dans "+n+" s";else{clearInterval(t);b.disabled=false;b.textContent="▼ Continuer";b.onclick=()=>A.snap(1);delete sw.dataset.lock;sw.style.overflowY="auto"}},1000)}
-function swUI(){const el=document.querySelector(".sl[data-live].on");if(!el||!L)return;const l=S.lives[L.id]||L.info;el.innerHTML=liveVHTML(l,false,S.follows.has(l.hostId),true);liveVInit()}
-function liveGone(){leaveLive();if(S.view.t==="lswipe")return renderLiveSwipe();S.view={t:"feed"};render()}
-const rr=()=>S.view.t==="lswipe"?swUI():render();
 function adInter(next){if($("inter"))return;
   const a=adPicker()();if(!a){next();return}
   const el=document.createElement("div");el.id="inter";el.style.cssText="position:fixed;inset:0;z-index:100;background:#000d;display:flex;align-items:center;justify-content:center;padding:16px";
@@ -632,18 +573,17 @@ function adInter(next){if($("inter"))return;
   document.body.appendChild(el);countAd(a.id);
   let n=5;const b=el.querySelector("#ixc"),t=setInterval(()=>{n--;if(n>0)b.textContent="Fermer dans "+n+" s";else{clearInterval(t);b.disabled=false;b.textContent="✕ Fermer";b.onclick=()=>{el.remove();next()}}},1000)}
 const otherLives=id=>{const o=Object.entries(S.lives).filter(([k])=>k!==id).slice(0,6);
-  return o.length?`<h4 style="margin:14px 0 8px">Autres lives</h4>${o.map(([k,x])=>`<div class="mr" style="cursor:pointer" onclick="A.joinLive('${esc(k)}')"><div class="th"><div class="tc" style="background:linear-gradient(135deg,#ff2b5c,#7a1fff);color:#fff;font-size:12px">${x.vert?"📱 ":""}🔴 ${esc((x.title||"").slice(0,30))}</div></div><div><div class="ti" style="font-size:14px">${esc(x.title)}</div><div class="sub">${esc(nm(x.hostId,x.hostName))} · 👁 ${x.n||0}</div></div></div>`).join("")}`:""};
+  return o.length?`<h4 style="margin:14px 0 8px">Autres lives</h4>${o.map(([k,x])=>`<div class="mr" style="cursor:pointer" onclick="A.joinLive('${esc(k)}')"><div class="th"><div class="tc" style="background:linear-gradient(135deg,#ff2b5c,#7a1fff);color:#fff;font-size:12px">🔴 ${esc((x.title||"").slice(0,30))}</div></div><div><div class="ti" style="font-size:14px">${esc(x.title)}</div><div class="sub">${esc(nm(x.hostId,x.hostName))} · 👁 ${x.n||0}</div></div></div>`).join("")}`:""};
 
 /* ---------- Actions ---------- */
 window.boot=boot;window.auth=auth;
 const A=window.A={
   go(t){t&&t!=="foryou"&&t!=="home"?goSwipe(t):A.home()},
   home(){history.replaceState(null,"",location.pathname);S.view={t:"feed"};S.q="";S.tag=null;S.cat="Tout";loadFeed().then(render).catch(render)},
-  nv(k){k==="home"?A.home():k==="lswipe"?A.lswipe():goSwipe(k)},
-  lswipe(){if(L&&!L.host)leaveLive();history.replaceState(null,"",location.pathname);S.view={t:"lswipe"};render();scrollTo(0,0)},
+  nv(k){k==="home"?A.home():goSwipe(k)},
   cat(c){S.cat=c;renderFeed()},
   swipe(tab){goSwipe(tab)},
-  snap(d){const sw=$("sw");if(sw&&!sw.dataset.lock)sw.scrollBy({top:d*sw.clientHeight,behavior:"smooth"})},
+  snap(d){const sw=$("sw");if(sw)sw.scrollBy({top:d*sw.clientHeight,behavior:"smooth"})},
   async ppOff(){try{await updateDoc(doc(db,"users",S.user.uid),{paypal:""});S.me.paypal="";S.users[S.user.uid]=S.me;toast("PayPal déconnecté");render()}catch(e){alert(errMsg(e))}},
   donTest(){const u=donURL(S.user.uid,1);if(u)window.open(u,"_blank","noopener,noreferrer")},
   async saveDon(){let v=$("spp").value.trim().replace(/^https?:\/\//i,"").replace(/^(www\.)?paypal\.me\//i,"").replace(/^(www\.)?paypal\.com\/paypalme\//i,"").replace(/[\/?#].*$/,"");
@@ -772,8 +712,8 @@ const A=window.A={
     try{await deleteDoc(doc(db,"posts",id));S.posts=S.posts.filter(x=>x.id!==id);S.view={t:"feed"};render()}catch(e){alert(errMsg(e))}},
   async follow(uid){
     const ref=doc(db,"follows",S.user.uid+"_"+uid),u=S.users[uid]||{};
-    try{if(S.follows.has(uid)){S.follows.delete(uid);u.followers=Math.max(0,(u.followers||0)-1);rr();await deleteDoc(ref);updateDoc(doc(db,"users",uid),{followers:increment(-1)})}
-    else{S.follows.add(uid);u.followers=(u.followers||0)+1;rr();await setDoc(ref,{from:S.user.uid,to:uid});updateDoc(doc(db,"users",uid),{followers:increment(1)});notify(uid,"follow")}}catch(e){alert(errMsg(e))}},
+    try{if(S.follows.has(uid)){S.follows.delete(uid);u.followers=Math.max(0,(u.followers||0)-1);render();await deleteDoc(ref);updateDoc(doc(db,"users",uid),{followers:increment(-1)})}
+    else{S.follows.add(uid);u.followers=(u.followers||0)+1;render();await setDoc(ref,{from:S.user.uid,to:uid});updateDoc(doc(db,"users",uid),{followers:increment(1)});notify(uid,"follow")}}catch(e){alert(errMsg(e))}},
   settings(){S.view={t:"settings"};render();scrollTo(0,0)},
   notifs(){S.view={t:"notifs"};render();S.notifs.filter(n=>!n.read).forEach(n=>{n.read=true;updateDoc(doc(db,"notifs",n.id),{read:true}).catch(()=>{})})},
   save(id){const a=S.me.saved||[],on=a.includes(id);S.me.saved=on?a.filter(x=>x!==id):[...a,id];
@@ -806,22 +746,17 @@ const A=window.A={
   joinLive(id){const l=S.lives[id];if(!l)return toast("Ce live est terminé");
     if(L&&L.id===id)return joinLive(id);if(l.hostId===S.user.uid)return;if(L?.host)return alert("Termine d'abord ton propre live.");
     if(S.liveSeen)adInter(()=>{if(S.lives[id])joinLive(id);else toast("Ce live est terminé")});else joinLive(id)},
-  liveModal(){if(L?.host){S.view={t:"live",id:L.id};return render()}S.lvert=null;
+  liveModal(){if(L?.host){S.view={t:"live",id:L.id};return render()}
     $("modal").innerHTML=`<div class="modal"><div class="box"><h3 style="margin-top:0">🔴 Lancer un live</h3><input id="lt" maxlength="80" placeholder="Titre du live">
     <div class="sub">Ton micro sera partagé : tous les spectateurs t'entendent en direct. Tu peux lancer des sondages et afficher des images.</div>
-    <div class="sub" style="margin:10px 0 4px"><b>Format du live</b></div>
-    <div class="chips" style="padding:0"><button type="button" class="chip" id="fv" onclick="A.lfmt(1)">📱 Vertical</button><button type="button" class="chip" id="fl" onclick="A.lfmt(0)">🖥 Long</button></div>
-    <div class="sub" style="margin-bottom:8px">Vertical : visible depuis l'accueil et dans « Défilement live ». Long : visible seulement depuis l'accueil.</div>
     <div class="err" id="err"></div><button class="pri" onclick="A.startLive()">Démarrer le live</button> <button class="btn" onclick="A.close()">Annuler</button></div></div>`},
-  lfmt(v){S.lvert=!!v;$("fv").classList.toggle("on",!!v);$("fl").classList.toggle("on",!v)},
   async startLive(){
     const t=$("lt").value.trim();if(t.length<3)return showErr("Donne un titre au live (3 caractères min.).");
-    if(S.lvert!==true&&S.lvert!==false)return showErr("Choisis le format : vertical ou long.");
     let stream;try{stream=await navigator.mediaDevices.getUserMedia({audio:{echoCancellation:true,noiseSuppression:true}})}catch(e){return showErr("Micro refusé ou introuvable : autorise-le dans le navigateur.")}
     const uid=S.user.uid;let id;
-    try{id=(await addDoc(collection(db,"posts"),{title:t,text:"",tags:[],imgs:[],thumb:"",cat:"Live",mood:"",place:"",link:"",authorId:uid,authorName:S.me.name,likes:0,comments:0,views:0,clicks:0,impressions:0,createdAt:serverTimestamp(),live:true,liveOn:true,beat:serverTimestamp(),n:0,mic:true,camSid:null,scrSid:null,layout:"pip",vert:S.lvert})).id}
+    try{id=(await addDoc(collection(db,"posts"),{title:t,text:"",tags:[],imgs:[],thumb:"",cat:"Live",mood:"",place:"",link:"",authorId:uid,authorName:S.me.name,likes:0,comments:0,views:0,clicks:0,impressions:0,createdAt:serverTimestamp(),live:true,liveOn:true,beat:serverTimestamp(),n:0,mic:true,camSid:null,scrSid:null,layout:"pip"})).id}
     catch(e){stream.getTracks().forEach(x=>x.stop());return showErr(errMsg(e))}
-    L={id,host:true,un:[],msgs:[],t0:Date.now(),info:{hostId:uid,hostName:S.me.name,title:t,n:0,mic:true,vert:S.lvert},pcs:{},stream,n:0};
+    L={id,host:true,un:[],msgs:[],t0:Date.now(),info:{hostId:uid,hostName:S.me.name,title:t,n:0,mic:true},pcs:{},stream,n:0};
     L.hb=setInterval(()=>updateDoc(lref(id),{beat:serverTimestamp()}).catch(()=>{}),20000);
     L.un.push(onSnapshot(lref(id),sn=>{if(!L||L.id!==id||!sn.exists())return;const d=sn.data();L.info={...d,hostId:d.authorId,hostName:d.authorName};L.poll=d.lpoll||null;L.votes=d.lvotes||{};drawMic();drawVideo();drawPoll();hostSync(d)}));
     listenLive(id);A.close();S.view={t:"live",id};render()},
@@ -843,7 +778,7 @@ const A=window.A={
     addDoc(collection(db,"posts",L.id,"comments"),{kind:"react",uid:S.user.uid,e,c:n,createdAt:serverTimestamp()}).catch(()=>{})},
   sound(){L.audio?.play().then(()=>toast("Son activé"),()=>toast("Clique sur la page puis réessaie"))},
   async toggleCam(){if(!L?.host)return;if(L.camTrack)return A.stopTrack("cam");
-    let st;try{st=await navigator.mediaDevices.getUserMedia({video:{width:{ideal:1280},height:{ideal:720},aspectRatio:{ideal:16/9},frameRate:{ideal:24}},audio:false})}
+    let st;try{st=await navigator.mediaDevices.getUserMedia({video:{width:{ideal:854},height:{ideal:480},frameRate:{ideal:24}},audio:false})}
     catch(e){return alert("Caméra refusée ou introuvable : autorise-la dans le navigateur.")}
     A.setTrack("cam",st)},
   async toggleScr(){if(!L?.host)return;if(L.scrTrack)return A.stopTrack("scr");
@@ -856,11 +791,10 @@ const A=window.A={
   stopTrack(k){const t=L?.[k+"Track"];if(!t||!L.host)return;
     Object.values(L.pcs).forEach(pc=>{const sd=pc._snd?.[t.id];if(sd){try{pc.removeTrack(sd)}catch(e){}delete pc._snd[t.id]}});
     t.stop();L[k+"Track"]=null;L[k+"Stream"]=null;updateDoc(lref(L.id),{[k+"Sid"]:null}).catch(()=>{});drawVideo();toast(k==="scr"?"Partage d'écran arrêté":"Caméra coupée")},
-  layout(v){if(L?.host)updateDoc(lref(L.id),{layout:v}).catch(()=>{})},
-  cycLayout(){const o=["pip","cam","scr"],c=L?.info?.layout||"pip";A.layout(o[(o.indexOf(c)+1)%3]);toast("Affichage changé")}
+  layout(v){if(L?.host)updateDoc(lref(L.id),{layout:v}).catch(()=>{})}
 };
 addEventListener("resize",fitSwipe);
-addEventListener("keydown",e=>{if(!["swipe","lswipe"].includes(S.view?.t)||/INPUT|TEXTAREA|SELECT/.test(document.activeElement?.tagName||""))return;
+addEventListener("keydown",e=>{if(S.view?.t!=="swipe"||/INPUT|TEXTAREA|SELECT/.test(document.activeElement?.tagName||""))return;
   if(e.key==="ArrowDown"||e.key==="PageDown"){e.preventDefault();A.snap(1)}else if(e.key==="ArrowUp"||e.key==="PageUp"){e.preventDefault();A.snap(-1)}});
 addEventListener("pagehide",()=>{if(L?.host)updateDoc(lref(L.id),{liveOn:false}).catch(()=>{})});
 </script>
