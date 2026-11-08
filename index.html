@@ -102,7 +102,6 @@ body.light{--bg:#f3f3fa;--sf:#fff;--sf2:#e4e4f0;--tx:#15151f;--mu:#62627a}
 .msgs{flex:1;overflow:auto}.msg{display:flex;gap:8px;margin:8px 0;font-size:14px;align-items:flex-start;word-break:break-word}
 #simg{z-index:1}
 </style>
-<script src="https://download.agora.io/sdk/release/AgoraRTC_N-4.20.0.js"></script>
 </head>
 <body>
 <div id="app"></div>
@@ -116,7 +115,8 @@ const app=initializeApp({apiKey:"AIzaSyDtCmvlrwEblK8a5e0L9vwuLZ2XCIstiDo",authDo
 const auth=getAuth(app),db=getFirestore(app);
 const DB_URL=""; // ← colle ici l'URL affichée en haut de Firebase → Realtime Database (ex: https://pide-post-default-rtdb.europe-west1.firebasedatabase.app). Vide = URL par défaut.
 let rdb;try{rdb=getDatabase(app,DB_URL||undefined)}catch(e){console.error("RTDB",e)}
-const AGORA_APP_ID=""; // ← colle ici ton App ID Agora (console.agora.io → ton projet → App ID). Agora gère la voix et la vidéo des lives.
+const MAX_VIEWERS=10; // la voix/vidéo part directement du créateur vers chaque spectateur (WebRTC) : au-delà de ~10, sa connexion sature
+const ICE={iceServers:[{urls:"stun:stun.l.google.com:19302"},{urls:"stun:stun1.l.google.com:19302"}]};
 const $=id=>document.getElementById(id);
 const esc=s=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 const TAG=/#([\p{L}\p{N}_]{2,30})/gu;
@@ -321,43 +321,67 @@ function renderNotifs(){
   const T={like:"a aimé ton post",comment:"a commenté ton post",follow:"s'est abonné à toi"};
   $("ct").innerHTML=`<div style="max-width:680px"><h2 style="margin-top:0">🔔 Notifications</h2>${S.notifs.length?S.notifs.map(n=>`<div class="nt ${n.read?"":"un"}" onclick="${n.pid?`A.open('${n.pid}')`:`A.profile('${n.from}')`}">${av(n.from,40)}<div><b>${esc(nm(n.from))}</b> ${T[n.type]||""}<div class="sub">${ago(n.createdAt)}</div></div></div>`).join(""):`<div class="empty">Aucune notification pour l'instant.</div>`}</div>`}
 
-/* ---------- LIVE : Agora = voix + vidéo (caméra / écran) ; Realtime Database = liste, chat, réactions, sondages, images ---------- */
+/* ---------- LIVE (Realtime Database + WebRTC audio) ---------- */
 function watchLives(){if(S.lw||!rdb)return;S.lw=1;
   onValue(rref(rdb,"lives"),sn=>{const v=sn.val()||{},sig=JSON.stringify(Object.entries(v).map(([k,x])=>[k,x.n||0,x.title]));S.lives=v;
     if(sig!==S.lsig){S.lsig=sig;if(S.me&&S.view.t==="feed")renderFeed()}},e=>console.warn("RTDB lives",e))}
+const addIce=(pc,c)=>{if(pc.remoteDescription)pc.addIceCandidate(c).catch(()=>{});else(pc._q=pc._q||[]).push(c)};
+const setRemote=async(pc,d)=>{await pc.setRemoteDescription(d);(pc._q||[]).forEach(c=>pc.addIceCandidate(c).catch(()=>{}));pc._q=[]};
 function leaveLive(){if(!L)return;L.un.forEach(f=>{try{f()}catch(e){}});
-  [L.mic,L.vtrack].forEach(t=>{try{t?.stop();t?.close()}catch(e){}});
-  try{L.rt?.leave().catch(()=>{})}catch(e){}
-  if(!L.host&&rdb)remove(rref(rdb,"liveViewers/"+L.id+"/"+S.user.uid)).catch(()=>{});
+  Object.values(L.pcs||{}).forEach(p=>p.close());L.pc?.close();
+  if(L.host)[L.stream,L.vstream].forEach(st=>st&&st.getTracks().forEach(t=>t.stop()));
+  if(L.audio)L.audio.srcObject=null;
+  if(!L.host&&rdb){remove(rref(rdb,"liveViewers/"+L.id+"/"+S.user.uid)).catch(()=>{});remove(rref(rdb,"liveRtc/"+L.id+"/"+S.user.uid)).catch(()=>{})}
   L=null}
+async function connectViewer(vid){
+  const id=L.id,pc=new RTCPeerConnection(ICE),base="liveRtc/"+id+"/"+vid;
+  L.pcs[vid]?.close();L.pcs[vid]=pc;pc._snd={};
+  pc.onicecandidate=e=>e.candidate&&push(rref(rdb,base+"/h"),e.candidate.toJSON());
+  pc.onnegotiationneeded=async()=>{if(pc.signalingState!=="stable")return;
+    try{const o=await pc.createOffer();if(pc.signalingState!=="stable")return;await pc.setLocalDescription(o);
+      pc._rev=Date.now();await set(rref(rdb,base+"/offer"),{type:o.type,sdp:o.sdp,rev:pc._rev})}catch(e){console.warn("negotiation",e)}};
+  await remove(rref(rdb,base));
+  L?.un.push(onValue(rref(rdb,base+"/answer"),sn=>{const a=sn.val();if(a&&a.rev===pc._rev&&pc.signalingState==="have-local-offer")setRemote(pc,a).catch(()=>{})}));
+  L?.un.push(onChildAdded(rref(rdb,base+"/v"),sn=>addIce(pc,sn.val())));
+  addTracks(pc)}
+function addTracks(pc){
+  if(!L||pc.connectionState==="closed")return;
+  L.stream.getTracks().forEach(t=>{if(!pc._snd[t.id])pc._snd[t.id]=pc.addTrack(t,L.stream)});
+  if(L.vtrack&&!pc._snd[L.vtrack.id])pc._snd[L.vtrack.id]=pc.addTrack(L.vtrack,L.vstream)}
 function listenLive(id){
   const c=(q,fn)=>L.un.push(onChildAdded(q,fn)),v=(q,fn)=>L.un.push(onValue(q,fn));
   c(rquery(rref(rdb,"liveChat/"+id),limitToLast(100)),sn=>{L.msgs.push(sn.val());addMsg(sn.val())});
   c(rquery(rref(rdb,"liveReact/"+id),limitToLast(30)),sn=>{const r=sn.val();if(r.c>=L.t0)floatRx(r.e)});
   v(rref(rdb,"livePoll/"+id),sn=>{L.poll=sn.val();drawPoll()});
   v(rref(rdb,"liveImg/"+id),sn=>{L.img=sn.val()?.src||"";drawImg()});
-  v(rref(rdb,"lives/"+id),sn=>{const x=sn.val();if(x){L.info=x;drawMic()}else if(!L.host){toast("Le live est terminé");leaveLive();S.view={t:"feed"};render()}})}
+  v(rref(rdb,"lives/"+id),sn=>{const x=sn.val();if(x){L.info=x;drawMic();drawVideo()}else if(!L.host){toast("Le live est terminé");leaveLive();S.view={t:"feed"};render()}})}
 async function joinLive(id){
   if(!rdb)return alert("Realtime Database indisponible : vérifie DB_URL dans le fichier.");
-  if(!AGORA_APP_ID||!window.AgoraRTC)return alert("Agora n'est pas configuré : colle ton App ID dans AGORA_APP_ID, en haut du script.");
   if(L&&L.id===id){S.view={t:"live",id};return render()}
   const l=S.lives[id];if(!l||l.hostId===S.user.uid)return;
+  if((l.n||0)>=MAX_VIEWERS)return alert("Ce live est complet ("+MAX_VIEWERS+" spectateurs max).");
   if(L?.host)return alert("Termine d'abord ton propre live.");
   if(L)leaveLive();
-  const uid=S.user.uid,rt=AgoraRTC.createClient({mode:"live",codec:"vp8"});
-  L={id,host:false,un:[],msgs:[],t0:Date.now(),info:l,rt};
+  const uid=S.user.uid,pc=new RTCPeerConnection(ICE),base="liveRtc/"+id+"/"+uid,au=new Audio();au.autoplay=true;
+  L={id,host:false,un:[],msgs:[],t0:Date.now(),info:l,pcs:{},pc,audio:au};
   S.view={t:"live",id};render();listenLive(id);
-  rt.on("user-published",async(u,type)=>{try{await rt.subscribe(u,type)}catch(e){return}if(!L)return;
-    if(type==="video"){L.vtrack=u.videoTrack;u.videoTrack.play("agv",{fit:"contain"})}else{L.aud=u.audioTrack;u.audioTrack.play()}});
-  rt.on("user-unpublished",(u,type)=>{if(type==="video"&&L){L.vtrack=null;const el=$("agv");if(el)el.innerHTML=""}});
-  try{await rt.setClientRole("audience");await rt.join(AGORA_APP_ID,id,null,uid)}
-  catch(e){toast("Connexion au live impossible : "+(e.message||e.code));leaveLive();S.view={t:"feed"};return render()}
+  pc.ontrack=e=>{if(!L)return;if(e.track.kind==="audio"){au.srcObject=e.streams[0];au.play().catch(()=>{})}else{L.vstream=e.streams[0];drawVideo()}};
+  pc.onicecandidate=e=>e.candidate&&push(rref(rdb,base+"/v"),e.candidate.toJSON());
+  await remove(rref(rdb,base));
+  L?.un.push(onValue(rref(rdb,base+"/offer"),async sn=>{const o=sn.val();if(!o||o.rev===pc._rev)return;pc._rev=o.rev;
+    try{await setRemote(pc,o);const an=await pc.createAnswer();await pc.setLocalDescription(an);set(rref(rdb,base+"/answer"),{type:an.type,sdp:an.sdp,rev:o.rev})}catch(e){console.warn("answer",e)}}));
+  L?.un.push(onChildAdded(rref(rdb,base+"/h"),sn=>addIce(pc,sn.val())));
   const pr=rref(rdb,"liveViewers/"+id+"/"+uid);await set(pr,true);onDisconnect(pr).remove()}
 function addMsg(m){const b=$("lchat");if(!b)return;const d=document.createElement("div");d.className="msg";d.innerHTML=av(m.uid,28)+`<div><b>${esc(m.name)}</b> ${esc(m.text)}</div>`;b.appendChild(d);b.scrollTop=b.scrollHeight}
 function floatRx(e){const st=$("stage");if(!st)return;const x=document.createElement("span");x.className="rx";x.textContent=e;x.style.left=(8+Math.random()*80)+"%";st.appendChild(x);setTimeout(()=>x.remove(),2700)}
 function drawMic(){const m=$("mic"),n=$("ln"),k=L.info?.n||0;if(m)m.textContent=L.info?.mic===false?"🔇 Micro coupé":"🎙️ Le créateur parle en direct";if(n)n.textContent=k+" spectateur"+(k>1?"s":"")}
 function drawImg(){const st=$("stage");if(!st)return;let im=$("simg");if(!L.img){im?.remove();return}
   if(!im){im=document.createElement("img");im.id="simg";im.className="si";st.prepend(im)}im.src=L.img}
+function drawVideo(){const c=$("agv");if(!c||!L)return;
+  if(!(L.vstream&&(L.host||L.info?.video))){c.innerHTML="";return}
+  let v=c.querySelector("video");
+  if(!v){v=document.createElement("video");v.autoplay=true;v.muted=true;v.playsInline=true;v.style.cssText="width:100%;height:100%;object-fit:contain;background:#000";c.appendChild(v)}
+  if(v.srcObject!==L.vstream)v.srcObject=L.vstream;v.play().catch(()=>{})}
 function drawPoll(){const el=$("lpoll");if(!el)return;const p=L.poll;if(!p){el.innerHTML="";return}
   const vs=Object.values(p.votes||{}),tot=vs.length,my=p.votes?.[S.user.uid],show=L.host||my!==undefined;
   el.innerHTML=`<div class="poll"><b>📊 ${esc(p.q)}</b>${p.opts.map((o,i)=>{const n=vs.filter(x=>x===i).length,pc=tot?Math.round(n*100/tot):0;
@@ -375,7 +399,7 @@ function renderLive(){
    <div class="chat"><h4 style="margin:0 0 8px">💬 Chat en direct</h4><div class="msgs" id="lchat"></div>
     <div style="margin:8px 0">${["❤️","🔥","😂","👏","😮"].map(e=>`<button class="chip" onclick="A.react('${e}')">${e}</button>`).join(" ")}</div>
     <input id="lmsg" maxlength="200" placeholder="Écris un message…" onkeydown="if(event.key==='Enter')A.say()"></div></div>`;
-  (L.msgs||[]).forEach(addMsg);L.vtrack?.play("agv",{fit:"contain"});drawPoll();drawImg();drawMic()}
+  (L.msgs||[]).forEach(addMsg);drawVideo();drawPoll();drawImg();drawMic()}
 
 /* ---------- Actions ---------- */
 window.boot=boot;window.auth=auth;
@@ -501,20 +525,19 @@ const A=window.A={
   async startLive(){
     const t=$("lt").value.trim();if(t.length<3)return showErr("Donne un titre au live (3 caractères min.).");
     if(!rdb)return showErr("Realtime Database indisponible : vérifie DB_URL dans le fichier.");
-    if(!AGORA_APP_ID||!window.AgoraRTC)return showErr("Agora n'est pas configuré : colle ton App ID dans AGORA_APP_ID, en haut du script.");
-    const uid=S.user.uid,r=push(rref(rdb,"lives")),id=r.key,info={hostId:uid,hostName:S.me.name,title:t,n:0,mic:true,t:Date.now()},rt=AgoraRTC.createClient({mode:"live",codec:"vp8"});let mic;
-    try{mic=await AgoraRTC.createMicrophoneAudioTrack()}catch(e){return showErr("Micro refusé ou introuvable : autorise-le dans le navigateur.")}
-    try{await rt.setClientRole("host");await rt.join(AGORA_APP_ID,id,null,uid);await rt.publish(mic)}
-    catch(e){mic.close();rt.leave().catch(()=>{});return showErr("Agora a refusé la connexion : "+(e.message||e.code))}
-    try{await set(r,info)}catch(e){mic.close();rt.leave().catch(()=>{});return showErr("Accès refusé à Realtime Database : vérifie les règles et DB_URL.")}
+    let stream;try{stream=await navigator.mediaDevices.getUserMedia({audio:{echoCancellation:true,noiseSuppression:true}})}catch(e){return showErr("Micro refusé ou introuvable : autorise-le dans le navigateur.")}
+    const uid=S.user.uid,r=push(rref(rdb,"lives")),id=r.key,info={hostId:uid,hostName:S.me.name,title:t,n:0,mic:true,t:Date.now()};
+    try{await set(r,info)}catch(e){stream.getTracks().forEach(x=>x.stop());return showErr("Accès refusé à Realtime Database : vérifie les règles et DB_URL.")}
     onDisconnect(r).remove();
-    L={id,host:true,un:[],msgs:[],t0:Date.now(),info,rt,mic};
+    L={id,host:true,un:[],msgs:[],t0:Date.now(),info,pcs:{},stream};
+    L.un.push(onChildAdded(rref(rdb,"liveViewers/"+id),sn=>connectViewer(sn.key)));
+    L.un.push(onChildRemoved(rref(rdb,"liveViewers/"+id),sn=>{L?.pcs[sn.key]?.close();if(L)delete L.pcs[sn.key];remove(rref(rdb,"liveRtc/"+id+"/"+sn.key)).catch(()=>{})}));
     L.un.push(onValue(rref(rdb,"liveViewers/"+id),sn=>update(r,{n:sn.numChildren()}).catch(()=>{})));
     listenLive(id);A.close();S.view={t:"live",id};render()},
   async endLive(silent){if(!L||!L.host)return;if(!silent&&!confirm("Terminer le live ?"))return;const id=L.id;leaveLive();
-    for(const p of ["liveChat","liveReact","livePoll","liveImg","liveViewers","lives"])await remove(rref(rdb,p+"/"+id)).catch(()=>{});
+    for(const p of ["liveChat","liveReact","livePoll","liveImg","liveViewers","liveRtc","lives"])await remove(rref(rdb,p+"/"+id)).catch(()=>{});
     if(!silent){S.view={t:"feed"};render()}},
-  async mic(){const m=L.mic,on=!m.enabled;await m.setEnabled(on);update(rref(rdb,"lives/"+L.id),{mic:on});toast(on?"Micro activé":"Micro coupé")},
+  mic(){const t=L.stream.getAudioTracks()[0];t.enabled=!t.enabled;update(rref(rdb,"lives/"+L.id),{mic:t.enabled});toast(t.enabled?"Micro activé":"Micro coupé")},
   livePoll(){if(L.poll&&!confirm("Remplacer le sondage actuel ?"))return;const q=prompt("Question du sondage :");if(!q)return;
     const o=(prompt("Choix séparés par des virgules (2 à 4) :")||"").split(",").map(x=>x.trim()).filter(Boolean).slice(0,4);
     if(o.length<2)return alert("Il faut au moins 2 choix.");set(rref(rdb,"livePoll/"+L.id),{q:q.slice(0,120),opts:o})},
@@ -524,17 +547,19 @@ const A=window.A={
   rmImg(){remove(rref(rdb,"liveImg/"+L.id))},
   say(){const i=$("lmsg"),t=i.value.trim().slice(0,200);if(!t)return;i.value="";push(rref(rdb,"liveChat/"+L.id),{uid:S.user.uid,name:S.me.name,text:t,t:Date.now()})},
   react(e){const n=Date.now();if(n-(L.lr||0)<400)return;L.lr=n;push(rref(rdb,"liveReact/"+L.id),{uid:S.user.uid,e,c:n})},
-  sound(){if(L?.aud){L.aud.play();toast("Son activé")}else toast("Le créateur n'a pas encore parlé")},
+  sound(){L.audio?.play().then(()=>toast("Son activé"),()=>toast("Clique sur la page puis réessaie"))},
   async startVideo(kind){
     if(!L?.host)return;
-    let tr;try{tr=kind==="screen"?await AgoraRTC.createScreenVideoTrack({encoderConfig:"1080p_1"},"disable"):await AgoraRTC.createCameraVideoTrack({encoderConfig:"480p_1"})}
-    catch(e){return alert(kind==="screen"?"Partage d'écran refusé ou indisponible sur cet appareil.":"Caméra refusée ou introuvable : autorise-la dans le navigateur.")}
-    await A.stopVideo(true);
-    L.vtrack=tr;tr.on("track-ended",()=>A.stopVideo());
-    try{await L.rt.publish(tr)}catch(e){tr.close();L.vtrack=null;return alert("Publication de la vidéo impossible : "+(e.message||e.code))}
-    tr.play("agv",{fit:"contain"});toast(kind==="screen"?"Écran partagé en direct":"Caméra en direct")},
-  async stopVideo(silent){const tr=L?.vtrack;if(!tr||!L.host)return;L.vtrack=null;try{await L.rt.unpublish(tr)}catch(e){}
-    tr.stop();tr.close();const el=$("agv");if(el)el.innerHTML="";if(silent!==true)toast("Vidéo arrêtée")}
+    if(kind==="screen"&&!navigator.mediaDevices.getDisplayMedia)return alert("Le partage d'écran n'est pas disponible sur cet appareil.");
+    let st;try{st=kind==="screen"?await navigator.mediaDevices.getDisplayMedia({video:true,audio:false}):await navigator.mediaDevices.getUserMedia({video:{width:{ideal:854},height:{ideal:480},frameRate:{ideal:24}},audio:false})}
+    catch(e){return alert(kind==="screen"?"Partage d'écran refusé ou annulé.":"Caméra refusée ou introuvable : autorise-la dans le navigateur.")}
+    A.stopVideo(true);
+    const t=st.getVideoTracks()[0];t.contentHint=kind==="screen"?"detail":"motion";t.onended=()=>A.stopVideo();
+    L.vstream=st;L.vtrack=t;Object.values(L.pcs).forEach(addTracks);
+    update(rref(rdb,"lives/"+L.id),{video:kind});drawVideo();toast(kind==="screen"?"Écran partagé en direct":"Caméra en direct")},
+  stopVideo(silent){const t=L?.vtrack;if(!t||!L.host)return;
+    Object.values(L.pcs).forEach(pc=>{const sd=pc._snd?.[t.id];if(sd){try{pc.removeTrack(sd)}catch(e){}delete pc._snd[t.id]}});
+    t.stop();L.vtrack=null;L.vstream=null;update(rref(rdb,"lives/"+L.id),{video:null});drawVideo();if(silent!==true)toast("Vidéo arrêtée")}
 };
 </script>
 </body>
