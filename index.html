@@ -92,9 +92,11 @@ body.light{--bg:#f3f3fa;--sf:#fff;--sf2:#e4e4f0;--tx:#15151f;--mu:#62627a}
 .toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:var(--tx);color:var(--bg);padding:10px 20px;border-radius:22px;z-index:50;font-weight:600}
 .nt{display:flex;gap:12px;align-items:center;padding:12px;border-radius:12px;cursor:pointer}.nt:hover{background:var(--sf2)}.nt.un{background:var(--sf)}
 .lv{display:grid;grid-template-columns:minmax(0,1fr) 360px;gap:20px}@media(max-width:1000px){.lv{grid-template-columns:1fr}}
-.stage{position:relative;aspect-ratio:16/9;border-radius:var(--r);overflow:hidden;background:linear-gradient(135deg,#3a0a4a,#0a1f4a);display:flex;align-items:center;justify-content:center;flex-direction:column;gap:12px;color:#fff}
+.stage{position:relative;aspect-ratio:16/9;border-radius:var(--r);overflow:hidden;background:#000;color:#fff}
 .stage img.si{position:absolute;inset:0;width:100%;height:100%;object-fit:contain;background:#000e}
-.onair{background:#ff2b5c;color:#fff;font-weight:800;padding:2px 10px;border-radius:6px;animation:pl 1.4s infinite;z-index:2}
+.onair{position:absolute;top:10px;left:10px;font-size:12px;background:#ff2b5c;color:#fff;font-weight:800;padding:2px 10px;border-radius:6px;animation:pl 1.4s infinite;z-index:3}
+.mst{position:absolute;left:10px;bottom:10px;z-index:3;background:#000a;color:#fff;border-radius:6px;padding:2px 8px;font-size:12px}
+.btn.on{background:var(--c1);color:#000}
 @keyframes pl{50%{opacity:.5}}
 .rx{position:absolute;bottom:10px;font-size:28px;animation:up 2.6s ease-out forwards;pointer-events:none;z-index:3}
 @keyframes up{to{transform:translateY(-220px);opacity:0}}
@@ -336,7 +338,7 @@ const waitIce=(pc,t=4000)=>new Promise(res=>{if(pc.iceGatheringState==="complete
   pc.addEventListener("icegatheringstatechange",h)});
 function leaveLive(){if(!L)return;clearInterval(L.hb);clearTimeout(L.ct);L.un.forEach(f=>{try{f()}catch(e){}});
   Object.values(L.pcs||{}).forEach(p=>p.close());L.pc?.close();
-  if(L.host)[L.stream,L.vstream].forEach(st=>st&&st.getTracks().forEach(t=>t.stop()));
+  if(L.host)[L.stream,L.camStream,L.scrStream].forEach(st=>st&&st.getTracks().forEach(t=>t.stop()));
   if(L.audio)L.audio.srcObject=null;
   if(!L.host)updateDoc(lref(L.id),{["rtc."+S.user.uid]:deleteField()}).catch(()=>{});
   L=null}
@@ -344,7 +346,7 @@ function leaveLive(){if(!L)return;clearInterval(L.hb);clearTimeout(L.ct);L.un.fo
 function addTracks(pc){
   if(!L||pc.connectionState==="closed")return;
   L.stream.getTracks().forEach(t=>{if(!pc._snd[t.id])pc._snd[t.id]=pc.addTrack(t,L.stream)});
-  if(L.vtrack&&!pc._snd[L.vtrack.id])pc._snd[L.vtrack.id]=pc.addTrack(L.vtrack,L.vstream)}
+  [["camTrack","camStream"],["scrTrack","scrStream"]].forEach(([a,b])=>{const t=L[a];if(t&&!pc._snd[t.id])pc._snd[t.id]=pc.addTrack(t,L[b])})}
 async function offer(vid,pc){if(!L||pc.signalingState!=="stable")return;
   try{const o=await pc.createOffer();if(pc.signalingState!=="stable")return;await pc.setLocalDescription(o);await waitIce(pc);
     pc._rev=Date.now();await updateDoc(lref(L.id),{["rtc."+vid+".o"]:{type:pc.localDescription.type,sdp:pc.localDescription.sdp,rev:pc._rev}})}catch(e){console.warn("offer",e)}}
@@ -380,7 +382,7 @@ async function joinLive(id){
   const uid=S.user.uid,pc=new RTCPeerConnection(ICE),au=new Audio();au.autoplay=true;
   L={id,host:false,un:[],msgs:[],t0:Date.now(),info:l,pc,audio:au};
   S.view={t:"live",id};render();listenLive(id);
-  pc.ontrack=e=>{if(!L)return;if(e.track.kind==="audio"){au.srcObject=e.streams[0];au.play().catch(()=>{})}else{L.vstream=e.streams[0];drawVideo()}};
+  pc.ontrack=e=>{if(!L)return;if(e.track.kind==="audio"){au.srcObject=e.streams[0];au.play().catch(()=>{})}else{(L.rs=L.rs||{})[e.streams[0].id]=e.streams[0];drawVideo()}};
   try{await updateDoc(lref(id),{["rtc."+uid]:{j:Date.now()}})}catch(e){toast("Connexion au live impossible");leaveLive();S.view={t:"feed"};return render()}
   if(!L||L.id!==id)return;
   L.un.push(onSnapshot(lref(id),async sn=>{
@@ -396,11 +398,30 @@ function floatRx(e){const st=$("stage");if(!st)return;const x=document.createEle
 function drawMic(){const m=$("mic"),n=$("ln"),k=L.info?.n||0;if(m)m.textContent=L.info?.mic===false?"🔇 Micro coupé":"🎙️ Le créateur parle en direct";if(n)n.textContent=k+" spectateur"+(k>1?"s":"")}
 function drawImg(){const st=$("stage");if(!st)return;let im=$("simg");if(!L.img){im?.remove();return}
   if(!im){im=document.createElement("img");im.id="simg";im.className="si";st.prepend(im)}im.src=L.img}
+function pipDrag(pw){
+  pw.onpointerdown=e=>{const st=$("agv").getBoundingClientRect(),r=pw.getBoundingClientRect(),h=e.target.id==="vph",sx=e.clientX,sy=e.clientY,ox=r.left-st.left,oy=r.top-st.top,ow=r.width;
+    L.dragging=1;pw.setPointerCapture(e.pointerId);e.preventDefault();
+    pw.onpointermove=m=>{
+      if(h)pw.style.width=Math.min(60,Math.max(12,(ow+m.clientX-sx)/st.width*100))+"%";
+      else{pw.style.left=Math.min(100-parseFloat(pw.style.width),Math.max(0,(ox+m.clientX-sx)/st.width*100))+"%";pw.style.top=Math.min(100-pw.offsetHeight/st.height*100,Math.max(0,(oy+m.clientY-sy)/st.height*100))+"%"}};
+    pw.onpointerup=()=>{pw.onpointermove=pw.onpointerup=null;if(L)L.dragging=0;
+      const f=k=>+parseFloat(pw.style[k]).toFixed(1);if(L)updateDoc(lref(L.id),{pip:{x:f("left"),y:f("top"),w:f("width")}}).catch(()=>{})}}}
 function drawVideo(){const c=$("agv");if(!c||!L)return;
-  if(!(L.vstream&&(L.host||L.info?.video))){c.innerHTML="";return}
-  let v=c.querySelector("video");
-  if(!v){v=document.createElement("video");v.autoplay=true;v.muted=true;v.playsInline=true;v.style.cssText="width:100%;height:100%;object-fit:contain;background:#000";c.appendChild(v)}
-  if(v.srcObject!==L.vstream)v.srcObject=L.vstream;v.play().catch(()=>{})}
+  const I=L.info||{},cam=L.host?L.camStream:L.rs?.[I.camSid],scr=L.host?L.scrStream:L.rs?.[I.scrSid];
+  const both=cam&&scr,mode=I.layout||"pip",main=both?(mode==="cam"?cam:scr):(cam||scr),pip=both&&mode==="pip"?cam:null;
+  let vm=$("vmain");
+  if(!main)vm?.remove();
+  else{if(!vm){vm=document.createElement("video");vm.id="vmain";vm.autoplay=true;vm.muted=true;vm.playsInline=true;vm.style.cssText="position:absolute;inset:0;width:100%;height:100%;object-fit:contain;background:#000";c.prepend(vm)}
+    if(vm.srcObject!==main)vm.srcObject=main;vm.play().catch(()=>{})}
+  let pw=$("vpip");
+  if(!pip)pw?.remove();
+  else{const P=I.pip||{x:70,y:66,w:26};
+    if(!pw){pw=document.createElement("div");pw.id="vpip";
+      pw.innerHTML='<video autoplay muted playsinline style="width:100%;height:100%;object-fit:cover;border-radius:10px;display:block;pointer-events:none"></video>'+(L.host?'<i id="vph" style="position:absolute;right:-7px;bottom:-7px;width:20px;height:20px;border-radius:50%;background:var(--c1);cursor:nwse-resize;touch-action:none"></i>':"");
+      c.appendChild(pw);if(L.host)pipDrag(pw)}
+    if(!L.dragging)pw.style.cssText=`position:absolute;left:${P.x}%;top:${P.y}%;width:${P.w}%;aspect-ratio:16/9;border:2px solid #fff;border-radius:12px;box-shadow:0 2px 14px #000a;z-index:2;`+(L.host?"cursor:move;touch-action:none;":"");
+    const v=pw.querySelector("video");if(v.srcObject!==pip)v.srcObject=pip;v.play().catch(()=>{})}
+  $("bcam")?.classList.toggle("on",!!L.camTrack);$("bscr")?.classList.toggle("on",!!L.scrTrack)}
 function drawPoll(){const el=$("lpoll");if(!el)return;const p=L.poll;if(!p){el.innerHTML="";return}
   const V=L.votes||{},vs=Object.values(V),tot=vs.length,my=V[S.user.uid],show=L.host||my!==undefined;
   el.innerHTML=`<div class="poll"><b>📊 ${esc(p.q)}</b>${p.opts.map((o,i)=>{const n=vs.filter(x=>x===i).length,pc=tot?Math.round(n*100/tot):0;
@@ -410,9 +431,10 @@ function renderLive(){
   if(!l){S.view={t:"feed"};return render()}
   const host=L.host,fl=S.follows.has(l.hostId);
   $("ct").innerHTML=`<div class="lv"><div>
-   <div class="stage" id="stage"><div id="agv" style="position:absolute;inset:0;z-index:0"></div><span class="onair">🔴 EN DIRECT</span><div style="font-size:22px;font-weight:800;text-align:center;padding:0 16px">${esc(l.title)}</div>${av(l.hostId,64)}<div class="sub" id="mic" style="color:#ddd"></div></div>
+   <div class="stage" id="stage"><div id="agv" style="position:absolute;inset:0;z-index:0"></div><span class="onair">🔴 EN DIRECT</span><span class="mst" id="mic"></span></div>
+   <h2 class="h1" style="margin:14px 0 0">${esc(l.title)}</h2>
    <div class="ab"><span>${av(l.hostId,44)}</span><div><b>${esc(nm(l.hostId,l.hostName))}</b><div class="sub" id="ln"></div></div><span class="sp"></span>
-   ${host?`<button class="btn" onclick="A.mic()">🎙️ Micro</button><button class="btn" onclick="A.startVideo('cam')">📷 Caméra</button><button class="btn" onclick="A.startVideo('screen')">🖥 Écran</button><button class="btn" onclick="A.stopVideo()">⏹ Vidéo</button><button class="btn" onclick="A.livePoll()">📊 Sondage</button><label class="btn">🖼 Image<input type="file" accept="image/*" hidden onchange="A.liveImg(this)"></label><button class="btn" onclick="A.rmImg()">Retirer l'image</button><button class="dg" onclick="A.endLive()">Terminer</button>`
+   ${host?`<button class="btn" onclick="A.mic()">🎙️ Micro</button><button class="btn" id="bcam" onclick="A.toggleCam()">📷 Caméra</button><button class="btn" id="bscr" onclick="A.toggleScr()">🖥 Écran</button><select style="width:auto;margin:0" title="Affichage" onchange="A.layout(this.value)"><option value="pip" ${l.layout!=="cam"&&l.layout!=="scr"?"selected":""}>Écran + petite cam</option><option value="cam" ${l.layout==="cam"?"selected":""}>Cam en grand</option><option value="scr" ${l.layout==="scr"?"selected":""}>Écran en grand</option></select><button class="btn" onclick="A.livePoll()">📊 Sondage</button><label class="btn">🖼 Image<input type="file" accept="image/*" hidden onchange="A.liveImg(this)"></label><button class="btn" onclick="A.rmImg()">Retirer l'image</button><button class="dg" onclick="A.endLive()">Terminer</button>`
    :`<button class="btn" onclick="A.sound()">🔊 Activer le son</button><button class="fol ${fl?"on":""}" onclick="A.follow('${l.hostId}')">${fl?"✓ Abonné":"+ S'abonner"}</button><button class="btn" onclick="A.go('foryou')">Quitter</button>`}</div>
    <div id="lpoll"></div></div>
    <div class="chat"><h4 style="margin:0 0 8px">💬 Chat en direct</h4><div class="msgs" id="lchat"></div>
@@ -545,11 +567,11 @@ const A=window.A={
     const t=$("lt").value.trim();if(t.length<3)return showErr("Donne un titre au live (3 caractères min.).");
     let stream;try{stream=await navigator.mediaDevices.getUserMedia({audio:{echoCancellation:true,noiseSuppression:true}})}catch(e){return showErr("Micro refusé ou introuvable : autorise-le dans le navigateur.")}
     const uid=S.user.uid;let id;
-    try{id=(await addDoc(collection(db,"posts"),{title:t,text:"",tags:[],imgs:[],thumb:"",cat:"Live",mood:"",place:"",link:"",authorId:uid,authorName:S.me.name,likes:0,comments:0,views:0,clicks:0,impressions:0,createdAt:serverTimestamp(),live:true,liveOn:true,beat:serverTimestamp(),n:0,mic:true,video:null})).id}
+    try{id=(await addDoc(collection(db,"posts"),{title:t,text:"",tags:[],imgs:[],thumb:"",cat:"Live",mood:"",place:"",link:"",authorId:uid,authorName:S.me.name,likes:0,comments:0,views:0,clicks:0,impressions:0,createdAt:serverTimestamp(),live:true,liveOn:true,beat:serverTimestamp(),n:0,mic:true,camSid:null,scrSid:null,layout:"pip"})).id}
     catch(e){stream.getTracks().forEach(x=>x.stop());return showErr(errMsg(e))}
     L={id,host:true,un:[],msgs:[],t0:Date.now(),info:{hostId:uid,hostName:S.me.name,title:t,n:0,mic:true},pcs:{},stream,n:0};
     L.hb=setInterval(()=>updateDoc(lref(id),{beat:serverTimestamp()}).catch(()=>{}),20000);
-    L.un.push(onSnapshot(lref(id),sn=>{if(!L||L.id!==id||!sn.exists())return;const d=sn.data();L.info={...d,hostId:d.authorId,hostName:d.authorName};L.poll=d.lpoll||null;L.votes=d.lvotes||{};drawMic();drawPoll();hostSync(d)}));
+    L.un.push(onSnapshot(lref(id),sn=>{if(!L||L.id!==id||!sn.exists())return;const d=sn.data();L.info={...d,hostId:d.authorId,hostName:d.authorName};L.poll=d.lpoll||null;L.votes=d.lvotes||{};drawMic();drawVideo();drawPoll();hostSync(d)}));
     listenLive(id);A.close();S.view={t:"live",id};render()},
   async endLive(silent){if(!L||!L.host)return;if(!silent&&!confirm("Terminer le live ?"))return;const id=L.id;leaveLive();
     try{await deleteDoc(lref(id))}catch(e){await updateDoc(lref(id),{liveOn:false}).catch(()=>{})}
@@ -568,18 +590,21 @@ const A=window.A={
   react(e){const n=Date.now();if(n-(L.lr||0)<800)return;L.lr=n;
     addDoc(collection(db,"posts",L.id,"comments"),{kind:"react",uid:S.user.uid,e,c:n,createdAt:serverTimestamp()}).catch(()=>{})},
   sound(){L.audio?.play().then(()=>toast("Son activé"),()=>toast("Clique sur la page puis réessaie"))},
-  async startVideo(kind){
-    if(!L?.host)return;
-    if(kind==="screen"&&!navigator.mediaDevices.getDisplayMedia)return alert("Le partage d'écran n'est pas disponible sur cet appareil.");
-    let st;try{st=kind==="screen"?await navigator.mediaDevices.getDisplayMedia({video:true,audio:false}):await navigator.mediaDevices.getUserMedia({video:{width:{ideal:854},height:{ideal:480},frameRate:{ideal:24}},audio:false})}
-    catch(e){return alert(kind==="screen"?"Partage d'écran refusé ou annulé.":"Caméra refusée ou introuvable : autorise-la dans le navigateur.")}
-    A.stopVideo(true);
-    const t=st.getVideoTracks()[0];t.contentHint=kind==="screen"?"detail":"motion";t.onended=()=>A.stopVideo();
-    L.vstream=st;L.vtrack=t;Object.values(L.pcs).forEach(addTracks);
-    updateDoc(lref(L.id),{video:kind}).catch(()=>{});drawVideo();toast(kind==="screen"?"Écran partagé en direct":"Caméra en direct")},
-  stopVideo(silent){const t=L?.vtrack;if(!t||!L.host)return;
+  async toggleCam(){if(!L?.host)return;if(L.camTrack)return A.stopTrack("cam");
+    let st;try{st=await navigator.mediaDevices.getUserMedia({video:{width:{ideal:854},height:{ideal:480},frameRate:{ideal:24}},audio:false})}
+    catch(e){return alert("Caméra refusée ou introuvable : autorise-la dans le navigateur.")}
+    A.setTrack("cam",st)},
+  async toggleScr(){if(!L?.host)return;if(L.scrTrack)return A.stopTrack("scr");
+    if(!navigator.mediaDevices.getDisplayMedia)return alert("Le partage d'écran n'est pas disponible sur cet appareil.");
+    let st;try{st=await navigator.mediaDevices.getDisplayMedia({video:true,audio:false})}catch(e){return alert("Partage d'écran refusé ou annulé.")}
+    A.setTrack("scr",st)},
+  setTrack(k,st){const t=st.getVideoTracks()[0];t.contentHint=k==="scr"?"detail":"motion";t.onended=()=>A.stopTrack(k);
+    L[k+"Track"]=t;L[k+"Stream"]=st;Object.values(L.pcs).forEach(addTracks);
+    updateDoc(lref(L.id),{[k+"Sid"]:st.id}).catch(()=>{});drawVideo();toast(k==="scr"?"Écran partagé":"Caméra activée")},
+  stopTrack(k){const t=L?.[k+"Track"];if(!t||!L.host)return;
     Object.values(L.pcs).forEach(pc=>{const sd=pc._snd?.[t.id];if(sd){try{pc.removeTrack(sd)}catch(e){}delete pc._snd[t.id]}});
-    t.stop();L.vtrack=null;L.vstream=null;updateDoc(lref(L.id),{video:null}).catch(()=>{});drawVideo();if(silent!==true)toast("Vidéo arrêtée")}
+    t.stop();L[k+"Track"]=null;L[k+"Stream"]=null;updateDoc(lref(L.id),{[k+"Sid"]:null}).catch(()=>{});drawVideo();toast(k==="scr"?"Partage d'écran arrêté":"Caméra coupée")},
+  layout(v){if(L?.host)updateDoc(lref(L.id),{layout:v}).catch(()=>{})}
 };
 addEventListener("pagehide",()=>{if(L?.host)updateDoc(lref(L.id),{liveOn:false}).catch(()=>{})});
 </script>
