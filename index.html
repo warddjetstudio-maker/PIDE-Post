@@ -129,6 +129,14 @@ body.light{--bg:#f3f3fa;--sf:#fff;--sf2:#e4e4f0;--tx:#15151f;--mu:#62627a}
 .snav button{width:44px;height:44px;border-radius:50%;border:0;background:var(--sf2);cursor:pointer;font-size:18px}
 @media(max-width:860px){.snav{display:none}}
 .adbtn{color:var(--c2);font-weight:700}
+/* Temps forts / Mes moments */
+.mg{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px}
+.mt{position:relative;aspect-ratio:16/9;border-radius:10px;overflow:hidden;cursor:pointer;border:3px solid transparent;background:#000}
+.mt img{width:100%;height:100%;object-fit:cover;display:block}
+.mt.on{border-color:var(--c1)}
+.mt .ck{position:absolute;top:6px;right:6px;background:#000a;color:#fff;border-radius:50%;width:24px;height:24px;display:flex;align-items:center;justify-content:center;font-size:14px}
+.mt.on .ck{background:var(--c1);color:#000}
+.mt .msc{position:absolute;left:6px;bottom:6px;max-width:80%;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;background:#000b;color:#fff;border-radius:6px;padding:1px 6px;font-size:11px}
 /* Icônes du menu (SVG légers) */
 .ni .ico{width:22px;height:22px;flex:none;display:inline-block;background:currentColor;-webkit-mask:var(--m) center/contain no-repeat;mask:var(--m) center/contain no-repeat}
 .ico.i-home{--m:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M12 3 2 12h3v9h5v-6h4v6h5v-9h3z'/%3E%3C/svg%3E")}
@@ -137,6 +145,7 @@ body.light{--bg:#f3f3fa;--sf:#fff;--sf2:#e4e4f0;--tx:#15151f;--mu:#62627a}
 .ico.i-recent{--m:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath fill-rule='evenodd' d='M12 2a10 10 0 100 20 10 10 0 000-20zm1 5h-2v6l5 3 1-1.7-4-2.3z'/%3E%3C/svg%3E")}
 .ico.i-follow{--m:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M9 12a4 4 0 100-8 4 4 0 000 8zm0 2c-3 0-8 1.5-8 4v2h16v-2c0-2.5-5-4-8-4zm7-2a3 3 0 100-6 3 3 0 000 6zm1 2c1.5.3 6 1.2 6 3.5V20h-4v-2c0-1.4-.8-2.6-2-3.6z'/%3E%3C/svg%3E")}
 .ico.i-saved{--m:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M6 3h12v18l-6-4-6 4z'/%3E%3C/svg%3E")}
+.ico.i-moment{--m:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M12 2l2.9 6.6 7.1.6-5.4 4.7 1.6 7-6.2-3.7-6.2 3.7 1.6-7L2 9.2l7.1-.6z'/%3E%3C/svg%3E")}
 .ico.i-ad{--m:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M3 10v4h3l7 4V6L6 10zm13-1v6a3 3 0 000-6z'/%3E%3C/svg%3E")}
 .ico.i-prof{--m:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M12 12a5 5 0 100-10 5 5 0 000 10zm0 2c-5 0-9 2.5-9 5v3h18v-3c0-2.5-4-5-9-5z'/%3E%3C/svg%3E")}
 .ico.i-set{--m:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath fill-rule='evenodd' d='M12 8a4 4 0 100 8 4 4 0 000-8zm9 5v-2l-2.2-.6a7 7 0 00-.7-1.6l1.1-2-1.4-1.4-2 1.1a7 7 0 00-1.6-.7L13 3h-2l-.6 2.2a7 7 0 00-1.6.7l-2-1.1-1.4 1.4 1.1 2a7 7 0 00-.7 1.6L3 11v2l2.2.6c.2.6.4 1.1.7 1.6l-1.1 2 1.4 1.4 2-1.1c.5.3 1 .5 1.6.7L11 21h2l.6-2.2c.6-.2 1.1-.4 1.6-.7l2 1.1 1.4-1.4-1.1-2c.3-.5.5-1 .7-1.6z'/%3E%3C/svg%3E")}
@@ -182,7 +191,7 @@ const MSG={"auth/operation-not-allowed":"Cette méthode de connexion n'est pas a
 const errMsg=e=>{const c=e?.code||"";return c in MSG?MSG[c]:(e?.message||"Erreur inconnue")+(c?" ["+c+"]":"")};
 const showErr=m=>{S.err=m;const el=$("err");if(el)el.textContent=m};
 async function boot(u){
-  S.user=u;S.me=null;S.boot=null;S.err="";
+  S.user=u;S.me=null;S.boot=null;S.err="";S.moments=undefined;S.pm=null;
   if(u){try{const d=await getDoc(doc(db,"users",u.uid));
       if(d.exists()){S.me=d.data();await loadSocial();await loadFeed();await loadNotifs();watchLives()}}
     catch(e){console.error(e);S.boot=errMsg(e)}}
@@ -302,7 +311,7 @@ function renderSwipe(){
   if(S.swStart){const sp=S.posts.find(x=>x.id===S.swStart);if(sp&&!sp.liveOn)list=[sp,...list.filter(x=>x.id!==sp.id)]}
   S.swStart=null;S.swUid=null;
   list.forEach((p,i)=>{h+=slideHTML(p);if((i+1)%4===0||(i===list.length-1&&list.length<4))h+=adSlide(pk())});
-  $("ct").innerHTML=`<div class="sw" id="sw">${h||`<div class="empty">Rien à voir ici pour l'instant.<br><button class="pri" onclick="A.compose()">Publier un post</button></div>`}</div><div class="snav"><button onclick="A.snap(-1)">▲</button><button onclick="A.snap(1)">▼</button></div>`;
+  $("ct").innerHTML=`<div class="sw" id="sw">${h||`<div class="empty">Rien à voir ici pour l'instant.<br><button class="pri" onclick="A.liveModal()">🔴 Lancer un live</button></div>`}</div><div class="snav"><button onclick="A.snap(-1)">▲</button><button onclick="A.snap(1)">▼</button></div>`;
   const sw=$("sw");fitSwipe();
   const io=new IntersectionObserver(es=>es.forEach(e=>{if(!e.isIntersecting)return;io.unobserve(e.target);const t=e.target.dataset;
     if(t.ad)return countAd(t.ad);
@@ -320,7 +329,7 @@ const donBtn=uid=>donInfo(uid)&&uid!==S.user.uid?`<button class="btn" style="bac
 
 /* ---------- Écrans ---------- */
 function authHTML(){return `<div class="auth"><div class="logo" style="font-size:42px">PIDE Post</div>
-  <p style="color:var(--mu)">Partage tes photos et tes idées.</p>
+  <p style="color:var(--mu)">Fais des lives, poste leurs meilleurs moments.</p>
   <button class="pri" style="width:100%;padding:12px" onclick="A.google()">Continuer avec Google</button>
   <p style="color:var(--mu);margin:14px 0">— ou par email —</p>
   <input id="nm" placeholder="Pseudo (pour l'inscription)"><input id="em" type="email" placeholder="Email">
@@ -332,7 +341,7 @@ function termsHTML(){return `<div class="auth"><div class="logo" style="font-siz
   <div class="box" style="text-align:left;margin:14px 0;font-size:13px;color:var(--mu);max-height:42vh">
   <p><b>1. Contenu.</b> Tu ne publies que des photos et du texte que tu as le droit de partager. Vidéos et sons sont interdits.</p>
   <p><b>2. Respect.</b> Pas de haine, harcèlement, contenu illégal, spam ou usurpation d'identité. Les contenus abusifs peuvent être supprimés.</p>
-  <p><b>3. Données.</b> Pseudo, photo de profil, publications, likes, abonnements et statistiques de vues sont stockés (Firebase/Google) pour faire fonctionner le service et personnaliser tes recommandations.</p>
+  <p><b>3. Données.</b> Pseudo, photo de profil, publications, likes, abonnements et statistiques de vues sont stockés (Firebase/Google) pour faire fonctionner le service et personnaliser tes recommandations. Pendant un live, des images de ton flux peuvent être analysées par Gemini (Google) pour repérer les temps forts.</p>
   <p><b>4. Publicité.</b> Les publicités « Sponsorisé » sont créées et payées par des membres ; chaque annonceur est responsable de sa pub.</p>
   <p><b>5. Responsabilité.</b> Tu es responsable de ce que tu publies et tu peux supprimer tes posts à tout moment.</p></div>
   <label style="display:flex;gap:8px;text-align:left;align-items:flex-start"><input type="checkbox" id="ok" style="width:auto;margin-top:3px">J'ai lu et j'accepte les conditions légales et la politique de confidentialité.</label>
@@ -344,19 +353,19 @@ function render(){
   if(!S.user)return a.innerHTML=authHTML();
   if(S.boot)return a.innerHTML=`<div class="auth"><div class="logo" style="font-size:30px">Oups</div><p class="err">${esc(S.boot)}</p><button class="pri" onclick="boot(auth.currentUser)">Réessayer</button> <button class="btn" onclick="A.out()">Se déconnecter</button></div>`;
   if(!S.me)return a.innerHTML=termsHTML();
-  const nav=[["home","home","Accueil (lives)"],["foryou","foryou","Live Rest"],["trend","trend","Tendances"],["recent","recent","Récents"],["follow","follow","Abonnements"],["saved","saved","Enregistrés"]];
-  const navOn=k=>k==="home"?S.view.t==="feed":S.view.t==="swipe"&&S.tab===k;
+  const nav=[["home","home","Accueil (lives)"],["foryou","foryou","Live Rest"],["trend","trend","Tendances"],["recent","recent","Récents"],["follow","follow","Abonnements"],["saved","saved","Enregistrés"],["moments","moment","Mes moments"]];
+  const navOn=k=>k==="home"?S.view.t==="feed":k==="moments"?S.view.t==="moments":S.view.t==="swipe"&&S.tab===k;
   const fl=[...S.follows].filter(id=>S.users[id]).slice(0,8),un=S.notifs.filter(n=>!n.read).length;applyTheme();
   a.innerHTML=`<div class="top"><span class="logo" onclick="A.home()">PIDE Post</span>
     <div class="search"><input placeholder="Rechercher un post, un #hashtag, un auteur…" value="${esc(S.q)}" onkeydown="if(event.key==='Enter')A.search(this.value)"></div>
-    <button class="btn" style="background:#ff2b5c;color:#fff" onclick="A.liveModal()">🔴 Live</button><button class="pri" onclick="A.compose()">+ Créer</button><span class="bell" onclick="A.notifs()">🔔${un?`<b>${un}</b>`:""}</span><span style="cursor:pointer" onclick="A.profile('${S.user.uid}')">${av(S.user.uid,34)}</span></div>
+    <button class="btn" style="background:#ff2b5c;color:#fff" onclick="A.liveModal()">🔴 Live</button><button class="pri" onclick="A.moments()">🎞️ Mes moments</button><span class="bell" onclick="A.notifs()">🔔${un?`<b>${un}</b>`:""}</span><span style="cursor:pointer" onclick="A.profile('${S.user.uid}')">${av(S.user.uid,34)}</span></div>
     <div class="lay"><nav class="side">${nav.map(n=>`<div class="ni ${navOn(n[0])?"on":""}" onclick="A.nv('${n[0]}')"><i class="ico i-${n[1]}"></i>${n[2]}</div>`).join("")}
     <div class="ni adbtn" onclick="A.adModal()"><i class="ico i-ad"></i>Mettre une pub</div>
     <div class="ni ${S.view.t==="profile"&&S.view.uid===S.user.uid?"on":""}" onclick="A.profile('${S.user.uid}')"><i class="ico i-prof"></i>Mon profil</div>
     <div class="ni ${S.view.t==="settings"?"on":""}" onclick="A.settings()"><i class="ico i-set"></i>Paramètres</div>
     ${fl.length?`<h4 class="fl">Mes abonnements</h4>`+fl.map(id=>`<div class="ni fl" onclick="A.profile('${id}')">${av(id,24)}<span>${esc(nm(id))}</span></div>`).join(""):""}</nav>
     <main class="ct${S.view.t==="swipe"?" np":""}" id="ct"></main></div><div id="modal"></div>`;
-  ({feed:renderFeed,post:renderPost,profile:renderProfile,settings:renderSettings,notifs:renderNotifs,live:renderLive,swipe:renderSwipe})[S.view.t]()}
+  ({feed:renderFeed,post:renderPost,profile:renderProfile,settings:renderSettings,notifs:renderNotifs,live:renderLive,swipe:renderSwipe,moments:renderMoments})[S.view.t]()}
 
 function cover(p){
   const t=p.title||p.text||"";
@@ -371,7 +380,7 @@ function cardHTML(p){
 const liveCover=l=>safeImg(l.thumb)?`<img loading="lazy" src="${l.thumb}">`:`<div class="tc" style="background:linear-gradient(135deg,#ff2b5c,#7a1fff);color:#fff">🔴 EN DIRECT<br>${esc((l.title||"").slice(0,60))}</div>`;
 const liveCard=(id,l)=>`<div class="vc" onclick="A.joinLive('${id}')"><div class="th">${liveCover(l)}<span class="bd l" style="background:#ff2b5c">🔴 LIVE</span><span class="bd">👁 ${l.n||0}</span></div><div class="row"><span>${av(l.hostId)}</span><div><div class="ti">${esc(l.title)}</div><div class="sub">${esc(nm(l.hostId,l.hostName))}</div><div class="sub">${l.n||0} spectateur${l.n>1?"s":""} · en direct</div></div></div></div>`;
 const gridHTML=(l,lv)=>{const pk=adPicker(),lc=lv?Object.entries(S.lives).map(([id,x])=>liveCard(id,x)).join(""):"";
-  return l.length||lc?`<div class="gr">${lc}${l.map((p,i)=>cardHTML(p)+((i===Math.min(3,l.length-1)||(i>3&&(i-3)%10===0))?adCard(pk()):"")).join("")}</div>`:`<div class="empty">Rien à voir ici pour l'instant.<br><button class="pri" onclick="A.compose()">Publier un post</button></div>`};
+  return l.length||lc?`<div class="gr">${lc}${l.map((p,i)=>cardHTML(p)+((i===Math.min(3,l.length-1)||(i>3&&(i-3)%10===0))?adCard(pk()):"")).join("")}</div>`:`<div class="empty">Rien à voir ici pour l'instant.<br><button class="pri" onclick="A.liveModal()">🔴 Lancer un live</button></div>`};
 function afterGrid(){
   const io=new IntersectionObserver(es=>es.forEach(e=>{if(!e.isIntersecting)return;io.unobserve(e.target);
     const id=e.target.dataset.id;if(id&&once("i_"+id)){const p=S.posts.find(x=>x.id===id);
@@ -460,6 +469,77 @@ function renderNotifs(){
   const T={like:"a aimé ton post",comment:"a commenté ton post",follow:"s'est abonné à toi"};
   $("ct").innerHTML=`<div style="max-width:680px"><h2 style="margin-top:0">🔔 Notifications</h2>${S.notifs.length?S.notifs.map(n=>`<div class="nt ${n.read?"":"un"}" onclick="${n.type==="payout"?`A.settings()`:n.pid?`A.open('${n.pid}')`:`A.profile('${n.from}')`}">${n.type==="payout"?`<span class="av" style="width:40px;height:40px;background:var(--sf2)">💰</span><div><b>Monétisation</b> ${esc(n.text||"")}`:`${av(n.from,40)}<div><b>${esc(nm(n.from))}</b> ${T[n.type]||""}`}<div class="sub">${ago(n.createdAt)}</div></div></div>`).join(""):`<div class="empty">Aucune notification pour l'instant.</div>`}</div>`}
 
+/* ---------- TEMPS FORTS DU LIVE (Gemini) ----------
+   Toutes les 15 s, une image du flux (écran ou caméra) est notée par Gemini de 0 à 10.
+   Les réactions et messages du chat ajoutent un bonus. À la fin du live, les meilleurs moments
+   sont sauvegardés dans « Mes moments » (collection Firestore « moments ») et proposés à la publication. */
+const GEMINI_KEY="AQ.Ab8RN6LztsxjzeRMryOWoM7QhyxSswQcBmNTBC2KHX0G1y5tXQ"; // visible par tous les visiteurs : restreins-la à ton domaine dans Google AI Studio / Cloud Console
+const GEMINI_URL="https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent";
+const HL_EVERY=15000,HL_KEEP=30,HL_FINAL=12,HL_MIN=4,HL_GAP=30000,HL_MAXPOST=8;
+const si=s=>safeImg(s)?s:"";
+async function geminiScore(b64){
+  const r=await fetch(GEMINI_URL,{method:"POST",headers:{"Content-Type":"application/json","x-goog-api-key":GEMINI_KEY},body:JSON.stringify({
+    contents:[{parts:[{text:"Tu choisis les temps forts d'un live. Note cette image de 0 à 10 : 10 = moment fort, spectaculaire, drôle, émotionnel ou très intéressant, image nette ; 5 = correct ; 0 = noir, flou, vide ou sans intérêt. Réponds uniquement en JSON : {\"score\":nombre}"},{inline_data:{mime_type:"image/jpeg",data:b64}}]}],
+    generationConfig:{temperature:.2,responseMimeType:"application/json",thinkingConfig:{thinkingBudget:0}}})});
+  if(!r.ok)throw new Error("Gemini "+r.status);
+  const j=await r.json(),t=(j.candidates?.[0]?.content?.parts||[]).map(p=>p.text||"").join("");
+  const o=JSON.parse(t.replace(/```json|```/g,"").trim());
+  return Math.max(0,Math.min(10,+o.score||0))}
+function hlFrame(){
+  if(!L?.host)return null;const I=L.info||{};
+  const st=I.layout==="cam"?(L.camStream||L.scrStream):(L.scrStream||L.camStream);
+  if(!st)return null;
+  let v=L.hv;if(!v){v=L.hv=document.createElement("video");v.muted=true;v.playsInline=true}
+  if(v.srcObject!==st){v.srcObject=st;v.play().catch(()=>{});return null}
+  if(v.readyState<2||!v.videoWidth)return null;
+  const r=Math.min(1,640/v.videoWidth),c=document.createElement("canvas");c.width=Math.round(v.videoWidth*r);c.height=Math.round(v.videoHeight*r);
+  c.getContext("2d").drawImage(v,0,0,c.width,c.height);return c.toDataURL("image/jpeg",.65)}
+async function hlTick(){
+  if(!L?.host||L.hlBusy)return;const img=hlFrame();if(!img)return;
+  const me=L,act=L.act||0;L.act=0;L.hlBusy=1;
+  let sc=null;try{sc=await geminiScore(img.split(",")[1])}catch(e){console.warn("gemini",e)}
+  const bonus=Math.min(3,act*.5),score=sc===null?Math.min(10,4+bonus*2):Math.min(10,sc+bonus);
+  me.hl.push({img,score,t:Date.now()});me.hl.sort((a,b)=>b.score-a.score);me.hl.length=Math.min(me.hl.length,HL_KEEP);me.hlBusy=0}
+function pickBest(list){
+  const ok=[...list].filter(x=>x.score>=HL_MIN).sort((a,b)=>b.score-a.score),out=[];
+  ok.forEach(x=>{if(out.length<HL_FINAL&&out.every(c=>Math.abs(c.t-x.t)>=HL_GAP))out.push(x)});
+  ok.forEach(x=>{if(out.length<Math.min(6,ok.length)&&!out.includes(x))out.push(x)});
+  return out.sort((a,b)=>b.score-a.score)}
+async function saveMoments(list,title){
+  const out=[];
+  await Promise.all(list.map(async x=>{const it={img:x.img,score:Math.round(x.score*10)/10,title};
+    try{const r=await addDoc(collection(db,"moments"),{uid:S.user.uid,img:x.img,score:it.score,title,createdAt:serverTimestamp()});it.id=r.id}
+    catch(e){console.warn("moments",e);S.momErr=errMsg(e)}
+    out.push(it)}));
+  out.sort((a,b)=>b.score-a.score);
+  S.moments=[...out.filter(i=>i.id).map(i=>({...i,createdAt:{toMillis:()=>Date.now()}})),...(S.moments||[])];
+  return out}
+function drawPM(){const m=S.pm;if(!m)return;
+  if(m.step==="ask"){
+    $("modal").innerHTML=`<div class="modal"><div class="box"><h3 style="margin-top:0">✨ ${m.items.length} temps fort${m.items.length>1?"s":""} repéré${m.items.length>1?"s":""}</h3>
+    <div class="sub">Gemini a choisi les meilleurs moments de « ${esc(m.title)} ». Veux-tu les poster dans Live Rest ?</div>
+    <div class="mg" style="margin:12px 0">${m.items.slice(0,4).map(i=>`<div class="mt"><img src="${si(i.img)}"></div>`).join("")}</div>
+    ${S.momErr?`<div class="err">Sauvegarde dans « Mes moments » impossible : ${esc(S.momErr)} → ajoute une règle Firestore pour la collection « moments ».</div>`:`<div class="sub">Si tu refuses, ils restent dans « Mes moments » pour plus tard.</div>`}
+    <div style="margin-top:12px"><button class="pri" onclick="A.pmStep()">Oui, choisir mes photos</button> <button class="btn" onclick="A.pmLater()">Non, garder pour plus tard</button></div></div></div>`}
+  else{
+    $("modal").innerHTML=`<div class="modal"><div class="box"><h3 style="margin-top:0">Poster dans Live Rest</h3>
+    <div class="sub">Clique sur les photos à publier (max ${HL_MAXPOST}) : <b id="pmn">${m.sel.size}</b> choisie(s).</div>
+    <div class="mg" style="margin:12px 0">${m.items.map((i,k)=>`<div class="mt ${m.sel.has(k)?"on":""}" onclick="A.pmTog(${k},this)"><img src="${si(i.img)}"><span class="ck">✓</span></div>`).join("")}</div>
+    <input id="pmt" maxlength="100" placeholder="Titre (optionnel)" value="${esc(m.title||"")}">
+    <textarea id="pmd" rows="4" maxlength="2000" placeholder="Décris ce moment… ajoute des #hashtags"></textarea>
+    <div class="err" id="err"></div>
+    <button class="pri" id="pmb" onclick="A.pmPublish()">Publier</button> <button class="btn" onclick="A.pmLater()">Plus tard</button></div></div>`}}
+async function renderMoments(){
+  $("ct").innerHTML="<p>Chargement…</p>";
+  if(!S.moments){try{const q=await getDocs(query(collection(db,"moments"),where("uid","==",S.user.uid)));S.moments=q.docs.map(d=>({id:d.id,...d.data()})).sort((a,b)=>ms(b)-ms(a))}
+    catch(e){return $("ct").innerHTML=`<p class="err">${esc(errMsg(e))}</p><div class="sub">Ajoute dans les règles Firestore : match /moments/{id} { allow read, delete: if request.auth != null && resource.data.uid == request.auth.uid; allow create: if request.auth != null && request.resource.data.uid == request.auth.uid; }</div>`}}
+  S.msel=new Set();drawMoments()}
+function drawMoments(){const l=S.moments||[];
+  $("ct").innerHTML=`<div style="max-width:900px"><h2 style="margin-top:0">🎞️ Mes moments</h2><div class="sub" style="margin-bottom:12px">Les temps forts de tes lives, gardés ici rien que pour toi. Sélectionne ceux à poster dans Live Rest.</div>
+  ${l.length?`<div class="mg">${l.map(m=>`<div class="mt ${S.msel.has(m.id)?"on":""}" onclick="A.momTog('${esc(m.id)}',this)"><img loading="lazy" src="${si(m.img)}"><span class="ck">✓</span><span class="msc">${esc(m.title||"")}</span></div>`).join("")}</div>
+  <div style="margin-top:14px"><button class="pri" onclick="A.momPost()">Poster la sélection</button> <button class="dg" onclick="A.momDel()">Supprimer la sélection</button></div>`
+  :`<div class="empty">Aucun moment pour l'instant.<br>Lance un live avec ta caméra ou ton écran : Gemini repère les meilleurs instants.<br><button class="pri" onclick="A.liveModal()">🔴 Lancer un live</button></div>`}</div>`}
+
 /* ---------- LIVE : WebRTC + signalisation Firestore, comme dans Nexus (aucun service en plus) ---------- */
 const lref=id=>doc(db,"posts",id);
 const bm=x=>x.beat?.toMillis?.()||Date.now();
@@ -476,8 +556,9 @@ function watchLives(){if(S.lw)return;S.lw=1;
 const waitIce=(pc,t=4000)=>new Promise(res=>{if(pc.iceGatheringState==="complete")return res();
   const h=()=>{if(pc.iceGatheringState==="complete"){clearTimeout(tm);pc.removeEventListener("icegatheringstatechange",h);res()}},tm=setTimeout(()=>{pc.removeEventListener("icegatheringstatechange",h);res()},t);
   pc.addEventListener("icegatheringstatechange",h)});
-function leaveLive(){if(!L)return;clearInterval(L.hb);clearTimeout(L.ct);L.un.forEach(f=>{try{f()}catch(e){}});
+function leaveLive(){if(!L)return;clearInterval(L.hb);clearInterval(L.hlT);clearTimeout(L.ct);L.un.forEach(f=>{try{f()}catch(e){}});
   Object.values(L.pcs||{}).forEach(p=>p.close());L.pc?.close();
+  if(L.hv)L.hv.srcObject=null;
   if(L.host)[L.stream,L.camStream,L.scrStream].forEach(st=>st&&st.getTracks().forEach(t=>t.stop()));
   if(L.audio)L.audio.srcObject=null;
   if(!L.host)updateDoc(lref(L.id),{["rtc."+S.user.uid]:deleteField()}).catch(()=>{});
@@ -508,9 +589,9 @@ function listenLive(id){
   L.un.push(onSnapshot(query(collection(db,"posts",id,"comments"),orderBy("createdAt","desc"),limit(100)),sn=>{
     if(!L||L.id!==id)return;
     sn.docChanges().filter(c=>c.type==="added").map(c=>c.doc.data()).sort((x,y)=>ms(x)-ms(y)).forEach(m=>{
-      if(m.kind==="react"){if(m.c>=L.t0)floatRx(m.e)}
+      if(m.kind==="react"){if(m.c>=L.t0){floatRx(m.e);if(L.host)L.act=(L.act||0)+1}}
       else if(m.kind==="img"){if(m.uid===L.info?.hostId){L.img=m.src||"";drawImg()}}
-      else if(m.kind==="chat"){L.msgs.push(m);addMsg(m)}})}))}
+      else if(m.kind==="chat"){L.msgs.push(m);addMsg(m);if(L.host)L.act=(L.act||0)+1}})}))}
 /* --- côté spectateur --- */
 async function joinLive(id){
   const l=S.lives[id];if(!l)return;
@@ -620,10 +701,38 @@ window.boot=boot;window.auth=auth;
 const A=window.A={
   go(t){t&&t!=="foryou"&&t!=="home"?goSwipe(t):A.home()},
   home(){history.replaceState(null,"",location.pathname);S.view={t:"feed"};S.q="";S.tag=null;S.cat="Tout";loadFeed().then(render).catch(render)},
-  nv(k){k==="home"?A.home():goSwipe(k)},
+  nv(k){k==="home"?A.home():k==="moments"?A.moments():goSwipe(k)},
   cat(c){S.cat=c;renderFeed()},
   swipe(tab){goSwipe(tab)},
   snap(d){const sw=$("sw");if(sw)sw.scrollBy({top:d*sw.clientHeight,behavior:"smooth"})},
+  /* --- Mes moments / temps forts --- */
+  moments(){S.view={t:"moments"};render();scrollTo(0,0)},
+  momTog(id,el){if(S.msel.has(id))S.msel.delete(id);else S.msel.add(id);el.classList.toggle("on",S.msel.has(id))},
+  momPost(){const items=(S.moments||[]).filter(m=>S.msel.has(m.id));if(!items.length)return toast("Sélectionne au moins une photo");
+    S.pm={items,sel:new Set(items.slice(0,HL_MAXPOST).map((_,i)=>i)),step:"pick",title:items[0].title||""};drawPM()},
+  async momDel(){const ids=[...S.msel];if(!ids.length)return toast("Sélectionne au moins une photo");if(!confirm("Supprimer "+ids.length+" photo(s) ?"))return;
+    try{await Promise.all(ids.map(id=>deleteDoc(doc(db,"moments",id))));S.moments=S.moments.filter(m=>!S.msel.has(m.id));S.msel=new Set();drawMoments()}catch(e){alert(errMsg(e))}},
+  hlAsk(items,title){S.pm={items,sel:new Set(items.slice(0,4).map((_,i)=>i)),step:"ask",title};drawPM()},
+  pmStep(){if(!S.pm)return;S.pm.step="pick";drawPM()},
+  pmLater(){S.pm=null;A.close();if(S.view.t==="moments")drawMoments()},
+  pmTog(i,el){const m=S.pm;if(!m)return;
+    if(m.sel.has(i))m.sel.delete(i);else{if(m.sel.size>=HL_MAXPOST)return toast("Maximum "+HL_MAXPOST+" photos");m.sel.add(i)}
+    el.classList.toggle("on",m.sel.has(i));const n=$("pmn");if(n)n.textContent=m.sel.size},
+  async pmPublish(){const m=S.pm;if(!m)return;
+    const sel=[...m.sel].sort((a,b)=>a-b).map(i=>m.items[i]);
+    if(!sel.length)return showErr("Choisis au moins une photo.");
+    const title=$("pmt").value.trim(),text=$("pmd").value.trim(),imgs=sel.map(x=>x.img).filter(safeImg);
+    if(!imgs.length)return showErr("Photos illisibles.");
+    if(imgs.join("").length+imgs[0].length>900000)return showErr("Photos trop lourdes : choisis-en moins.");
+    $("pmb").disabled=true;showErr("Publication…");
+    try{const tags=[...new Set([...(title+" "+text).matchAll(TAG)].map(x=>x[1].toLowerCase()))].slice(0,10);
+      const d={title,text,tags,imgs,thumb:imgs[0],cat:"Live",mood:"",place:"",link:"",authorId:S.user.uid,authorName:S.me.name,likes:0,comments:0,views:0,clicks:0,impressions:0,createdAt:serverTimestamp()};
+      const rf=await addDoc(collection(db,"posts"),d);boost(tags,2);
+      const ids=new Set(sel.map(x=>x.id).filter(Boolean));
+      await Promise.all([...ids].map(id=>deleteDoc(doc(db,"moments",id)).catch(()=>{})));
+      S.moments=(S.moments||[]).filter(x=>!ids.has(x.id));S.pm=null;
+      await loadFeed();A.close();S.swStart=rf.id;S.swUid=S.user.uid;S.tab="foryou";S.view={t:"swipe"};render()}
+    catch(e){showErr(errMsg(e));$("pmb").disabled=false}},
   async loadMonet(){const el=$("monet");if(!el)return;const uid=S.user.uid;
     try{const [ps,er,po,mo,ac]=await Promise.all([getDocs(query(collection(db,"posts"),where("authorId","==",uid))),getDocs(query(collection(db,"earnings"),where("to","==",uid),limit(5000))),getDocs(query(collection(db,"payouts"),where("uid","==",uid))),S.me.monet?getDoc(doc(db,"monet",uid)):Promise.resolve(null),getDoc(doc(db,"monetReqs",uid))]);
       const reqs=po.docs.map(d=>({id:d.id,...d.data()})).sort((a,b)=>ms(b)-ms(a)),earned=er.size,used=reqs.filter(r=>r.status!=="refused").reduce((a,r)=>a+(r.cents||0),0);
@@ -712,36 +821,8 @@ const A=window.A={
     const n=prompt("Pseudo :",S.me.name);if(n===null)return;const b=prompt("Bio (à propos de toi) :",S.me.bio||"");
     const u={name:n.trim()||S.me.name};if(b!==null)u.bio=b.trim().slice(0,200);
     try{await updateDoc(doc(db,"users",S.user.uid),u);Object.assign(S.me,u);render()}catch(e){alert(errMsg(e))}},
-  compose(){S.mood="";$("modal").innerHTML=`<div class="modal"><div class="box"><h3 style="margin-top:0">Créer un post</h3>
-    <input id="ti" maxlength="100" placeholder="Titre (optionnel)">
-    <textarea id="pt" rows="4" maxlength="2000" placeholder="Écris quelque chose… ajoute des #hashtags"></textarea>
-    <input id="pf" type="file" accept="image/*" multiple onchange="A.prev(this)"><div class="prev" id="pv"></div>
-    <select id="cat">${CATS.slice(1).map(c=>`<option>${c}</option>`).join("")}</select>
-    <div class="mood" style="margin:6px 0">${["😀","😍","😎","🔥","😂","🤔","😢","🎉"].map(e=>`<button type="button" onclick="A.mood(this,'${e}')">${e}</button>`).join(" ")}</div>
-    <input id="lo" maxlength="60" placeholder="📍 Lieu (optionnel)"><input id="lk" placeholder="🔗 Lien (optionnel)">
-    <label><input type="checkbox" id="pollon" style="width:auto" onchange="$('pollbox').style.display=this.checked?'block':'none'"> Ajouter un sondage</label>
-    <div id="pollbox" style="display:none"><input id="pq" placeholder="Question du sondage">${[1,2,3,4].map(i=>`<input class="pop" placeholder="Choix ${i}">`).join("")}</div>
-    <div class="err" id="err">Photos (jusqu'à 4) et texte uniquement.</div>
-    <button class="pri" id="pb" onclick="A.publish()">Publier</button> <button class="btn" onclick="A.close()">Annuler</button></div></div>`},
-  mood(b,e){S.mood=S.mood===e?"":e;b.parentNode.querySelectorAll("button").forEach(x=>x.classList.toggle("on",x.textContent===S.mood))},
-  prev(i){$("pv").innerHTML=[...i.files].slice(0,4).map(f=>`<img src="${URL.createObjectURL(f)}">`).join("")},
   thPrev(i){$("lthp").innerHTML=[...i.files].slice(0,1).map(f=>`<img src="${URL.createObjectURL(f)}">`).join("")},
   close(){$("modal").innerHTML=""},
-  async publish(){
-    const title=$("ti").value.trim(),text=$("pt").value.trim(),fs=[...$("pf").files].slice(0,4);let link=$("lk").value.trim();
-    const opts=$("pollon").checked?[...document.querySelectorAll(".pop")].map(i=>i.value.trim()).filter(Boolean):[];
-    if(!title&&!text&&!fs.length)return showErr("Ajoute un titre, du texte ou une photo.");
-    if($("pollon").checked&&opts.length<2)return showErr("Un sondage a besoin d'au moins 2 choix.");
-    if(link){if(!/^https?:\/\//i.test(link))link="https://"+link;try{new URL(link)}catch{return showErr("Lien invalide.")}}
-    $("pb").disabled=true;showErr("Publication…");
-    try{const imgs=[];for(const f of fs)imgs.push(await shrink(f,900,.6));
-      const thumb=fs[0]?await shrink(fs[0],480,.65):"";
-      if(imgs.join("").length+thumb.length>900000)throw new Error("Photos trop lourdes : choisis-en moins.");
-      const tags=[...new Set([...(title+" "+text).matchAll(TAG)].map(m=>m[1].toLowerCase()))].slice(0,10);
-      const d={title,text,tags,imgs,thumb,cat:$("cat").value,mood:S.mood,place:$("lo").value.trim(),link,authorId:S.user.uid,authorName:S.me.name,likes:0,comments:0,views:0,clicks:0,impressions:0,createdAt:serverTimestamp()};
-      if(opts.length){d.poll={q:$("pq").value.trim(),opts};d.pv={}}
-      const rf=await addDoc(collection(db,"posts"),d);boost(tags,2);await loadFeed();A.close();S.swStart=rf.id;S.swUid=S.user.uid;S.view={t:"swipe"};render()}
-    catch(e){showErr(errMsg(e));$("pb").disabled=false}},
   open(id){const p=S.posts.find(x=>x.id===id);if(!p)return;if(p.liveOn)return A.joinLive(id);
     S.swStart=id;S.swUid=S.view.t==="profile"?S.view.uid:null;history.replaceState(null,"",location.pathname);S.view={t:"swipe"};render();scrollTo(0,0)},
   async openPost(id){
@@ -799,7 +880,9 @@ const A=window.A={
     try{if(u.providerData[0]?.providerId==="google.com")await reauthenticateWithPopup(u,new GoogleAuthProvider());
       else{const pw=prompt("Entre ton mot de passe pour confirmer :");if(!pw)return;await reauthenticateWithCredential(u,EmailAuthProvider.credential(u.email,pw))}
       const ps=await getDocs(query(collection(db,"posts"),where("authorId","==",u.uid)));
-      await Promise.all(ps.docs.map(d=>deleteDoc(d.ref)));await deleteDoc(doc(db,"users",u.uid));await deleteUser(u)}
+      await Promise.all(ps.docs.map(d=>deleteDoc(d.ref)));
+      try{const ms2=await getDocs(query(collection(db,"moments"),where("uid","==",u.uid)));await Promise.all(ms2.docs.map(d=>deleteDoc(d.ref)))}catch(e){}
+      await deleteDoc(doc(db,"users",u.uid));await deleteUser(u)}
     catch(e){alert(errMsg(e))}},
   joinLive(id){const l=S.lives[id];if(!l)return toast("Ce live est terminé");
     if(L&&L.id===id)return joinLive(id);if(l.hostId===S.user.uid)return;if(L?.host)return alert("Termine d'abord ton propre live.");
@@ -809,6 +892,7 @@ const A=window.A={
     <label class="btn" style="display:inline-block;margin:8px 0 0">🖼 Miniature du live (optionnel)<input id="lth" type="file" accept="image/*" hidden onchange="A.thPrev(this)"></label>
     <div class="sub" style="margin-top:6px">C'est l'image affichée sur l'accueil : choisis-en une qui donne envie de cliquer.</div><div class="prev big" id="lthp"></div>
     <div class="sub" style="margin-top:8px">Ton micro sera partagé : tous les spectateurs t'entendent en direct. Tu peux lancer des sondages et afficher des images.</div>
+    <div class="sub" style="margin-top:8px">✨ Si tu partages ta caméra ou ton écran, Gemini repère les temps forts de ton live. À la fin, tu pourras les poster dans Live Rest ou les garder dans « Mes moments ».</div>
     <div class="err" id="err"></div><button class="pri" onclick="A.startLive()">Démarrer le live</button> <button class="btn" onclick="A.close()">Annuler</button></div></div>`},
   async startLive(){
     const t=$("lt").value.trim();if(t.length<3)return showErr("Donne un titre au live (3 caractères min.).");
@@ -818,16 +902,20 @@ const A=window.A={
     const uid=S.user.uid;let id;
     try{id=(await addDoc(collection(db,"posts"),{title:t,text:"",tags:[],imgs:[],thumb,cat:"Live",mood:"",place:"",link:"",authorId:uid,authorName:S.me.name,likes:0,comments:0,views:0,clicks:0,impressions:0,createdAt:serverTimestamp(),live:true,liveOn:true,beat:serverTimestamp(),n:0,mic:true,camSid:null,scrSid:null,layout:"pip"})).id}
     catch(e){stream.getTracks().forEach(x=>x.stop());return showErr(errMsg(e))}
-    L={id,host:true,un:[],msgs:[],t0:Date.now(),info:{hostId:uid,hostName:S.me.name,title:t,n:0,mic:true},pcs:{},stream,n:0};
+    L={id,host:true,un:[],msgs:[],t0:Date.now(),info:{hostId:uid,hostName:S.me.name,title:t,n:0,mic:true},pcs:{},stream,n:0,hl:[],act:0};
     L.hb=setInterval(()=>updateDoc(lref(id),{beat:serverTimestamp()}).catch(()=>{}),20000);
+    L.hlT=setInterval(hlTick,HL_EVERY);
     L.un.push(onSnapshot(lref(id),sn=>{if(!L||L.id!==id||!sn.exists())return;const d=sn.data();L.info={...d,hostId:d.authorId,hostName:d.authorName};L.poll=d.lpoll||null;L.votes=d.lvotes||{};drawMic();drawVideo();drawPoll();hostSync(d)}));
     listenLive(id);A.close();S.view={t:"live",id};render()},
   async liveThumb(inp){const f=inp.files[0];if(!f||!L?.host)return;
     try{const d=await shrink(f,640,.7);if(d.length>600000)throw new Error("Miniature trop lourde : choisis une autre image.");await updateDoc(lref(L.id),{thumb:d});toast("Miniature mise à jour")}catch(e){alert(errMsg(e))}inp.value=""},
-  async endLive(silent){if(!L||!L.host)return;if(!silent&&!confirm("Terminer le live ?"))return;const id=L.id;leaveLive();
+  async endLive(silent){if(!L||!L.host)return;if(!silent&&!confirm("Terminer le live ?"))return;
+    const id=L.id,title=L.info?.title||"Live",best=pickBest(L.hl||[]);leaveLive();
     try{const v=(await getDoc(lref(id))).data()?.views||0;if(v){await updateDoc(doc(db,"users",S.user.uid),{liveViews:increment(v)});S.me.liveViews=(S.me.liveViews||0)+v}}catch(e){}
     try{await deleteDoc(lref(id))}catch(e){await updateDoc(lref(id),{liveOn:false}).catch(()=>{})}
-    if(!silent){S.view={t:"feed"};render()}},
+    let items=[];S.momErr="";
+    if(best.length){try{items=await saveMoments(best,title)}catch(e){console.warn(e)}}
+    if(!silent){S.view={t:"feed"};render();if(items.length)A.hlAsk(items,title)}},
   mic(){const t=L.stream.getAudioTracks()[0];t.enabled=!t.enabled;updateDoc(lref(L.id),{mic:t.enabled}).catch(()=>{});toast(t.enabled?"Micro activé":"Micro coupé")},
   livePoll(){if(L.poll&&!confirm("Remplacer le sondage actuel ?"))return;const q=prompt("Question du sondage :");if(!q)return;
     const o=(prompt("Choix séparés par des virgules (2 à 4) :")||"").split(",").map(x=>x.trim()).filter(Boolean).slice(0,4);
