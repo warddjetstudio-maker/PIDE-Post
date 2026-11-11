@@ -146,6 +146,7 @@ body.light{--bg:#f3f3fa;--sf:#fff;--sf2:#e4e4f0;--tx:#15151f;--mu:#62627a}
 .ico.i-follow{--m:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M9 12a4 4 0 100-8 4 4 0 000 8zm0 2c-3 0-8 1.5-8 4v2h16v-2c0-2.5-5-4-8-4zm7-2a3 3 0 100-6 3 3 0 000 6zm1 2c1.5.3 6 1.2 6 3.5V20h-4v-2c0-1.4-.8-2.6-2-3.6z'/%3E%3C/svg%3E")}
 .ico.i-saved{--m:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M6 3h12v18l-6-4-6 4z'/%3E%3C/svg%3E")}
 .ico.i-moment{--m:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M12 2l2.9 6.6 7.1.6-5.4 4.7 1.6 7-6.2-3.7-6.2 3.7 1.6-7L2 9.2l7.1-.6z'/%3E%3C/svg%3E")}
+.ico.i-msg{--m:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M4 4h16v12H8l-4 4z'/%3E%3C/svg%3E")}
 .ico.i-ad{--m:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M3 10v4h3l7 4V6L6 10zm13-1v6a3 3 0 000-6z'/%3E%3C/svg%3E")}
 .ico.i-prof{--m:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M12 12a5 5 0 100-10 5 5 0 000 10zm0 2c-5 0-9 2.5-9 5v3h18v-3c0-2.5-4-5-9-5z'/%3E%3C/svg%3E")}
 .ico.i-set{--m:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath fill-rule='evenodd' d='M12 8a4 4 0 100 8 4 4 0 000-8zm9 5v-2l-2.2-.6a7 7 0 00-.7-1.6l1.1-2-1.4-1.4-2 1.1a7 7 0 00-1.6-.7L13 3h-2l-.6 2.2a7 7 0 00-1.6.7l-2-1.1-1.4 1.4 1.1 2a7 7 0 00-.7 1.6L3 11v2l2.2.6c.2.6.4 1.1.7 1.6l-1.1 2 1.4 1.4 2-1.1c.5.3 1 .5 1.6.7L11 21h2l.6-2.2c.6-.2 1.1-.4 1.6-.7l2 1.1 1.4-1.4-1.1-2c.3-.5.5-1 .7-1.6z'/%3E%3C/svg%3E")}
@@ -169,7 +170,7 @@ const $=id=>document.getElementById(id);
 const esc=s=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 const TAG=/#([\p{L}\p{N}_]{2,30})/gu;
 const CATS=["Tout","Photo","Humour","Musique","Gaming","Voyage","Food","Actu","Autre"];
-const S={user:null,me:null,posts:[],users:{},likes:new Set(),votes:{},follows:new Set(),tab:"foryou",cat:"Tout",tag:null,q:"",view:{t:"feed"},gi:0,cm:{},ads:[],mood:"",notifs:[],lives:{}};
+const S={user:null,me:null,posts:[],users:{},likes:new Set(),votes:{},follows:new Set(),followers:new Set(),tab:"foryou",cat:"Tout",tag:null,q:"",view:{t:"feed"},gi:0,cm:{},ads:[],mood:"",notifs:[],lives:{},chat:null,abo:null,aboAll:false};
 let L=null;
 const fmt=n=>n>=1e6?(n/1e6).toFixed(1)+" M":n>=1e3?(n/1e3).toFixed(1)+" k":(n||0);
 const ms=p=>p.createdAt?.toMillis?.()||Date.now();
@@ -191,7 +192,8 @@ const MSG={"auth/operation-not-allowed":"Cette méthode de connexion n'est pas a
 const errMsg=e=>{const c=e?.code||"";return c in MSG?MSG[c]:(e?.message||"Erreur inconnue")+(c?" ["+c+"]":"")};
 const showErr=m=>{S.err=m;const el=$("err");if(el)el.textContent=m};
 async function boot(u){
-  S.user=u;S.me=null;S.boot=null;S.err="";S.moments=undefined;S.pm=null;
+  window.A?.closeChat?.();
+  S.user=u;S.me=null;S.boot=null;S.err="";S.moments=undefined;S.pm=null;S.followers=new Set();S.abo=null;S.aboAll=false;
   if(u){try{const d=await getDoc(doc(db,"users",u.uid));
       if(d.exists()){S.me=d.data();await loadSocial();await loadFeed();await loadNotifs();watchLives()}}
     catch(e){console.error(e);S.boot=errMsg(e)}}
@@ -208,11 +210,14 @@ async function loadSocial(){
   const [l,f]=await Promise.all([getDocs(query(collection(db,"likes"),where("uid","==",S.user.uid))),getDocs(query(collection(db,"follows"),where("from","==",S.user.uid)))]);
   S.likes=new Set();S.votes={};
   l.docs.forEach(d=>{const x=d.data();x.vote!==undefined?S.votes[x.pid]=x.vote:S.likes.add(x.pid)});
-  S.follows=new Set(f.docs.map(d=>d.data().to))}
+  S.follows=new Set(f.docs.map(d=>d.data().to));
+  try{const g=await getDocs(query(collection(db,"follows"),where("to","==",S.user.uid)));S.followers=new Set(g.docs.map(d=>d.data().from))}catch(e){S.followers=new Set()}}
 async function loadFeed(){
   const [s,us]=await Promise.all([getDocs(query(collection(db,"posts"),orderBy("createdAt","desc"),limit(80))),getDocs(query(collection(db,"users"),limit(300)))]);
   S.posts=s.docs.map(d=>({id:d.id,...d.data()}));
   S.users={};us.docs.forEach(d=>S.users[d.id]=d.data());S.users[S.user.uid]=S.me;await loadAds()}
+async function loadUsers(ids){
+  await Promise.all(ids.filter(id=>!S.users[id]).map(async id=>{try{const d=await getDoc(doc(db,"users",id));if(d.exists())S.users[id]=d.data()}catch(e){}}))}
 
 /* ---------- Algorithme ---------- */
 function score(p){
@@ -327,6 +332,13 @@ const donURL=(uid,n)=>{const d=donInfo(uid);n=Math.round(+n*100)/100;if(!d||!(n>
   return d.t==="e"?`https://www.paypal.com/cgi-bin/webscr?cmd=_xclick&business=${encodeURIComponent(d.v)}&item_name=${encodeURIComponent("Soutien à "+nm(uid)+" sur PIDE Post")}&amount=${n}&currency_code=EUR&no_shipping=1`:`https://www.paypal.com/paypalme/${encodeURIComponent(d.v)}/${n}EUR`};
 const donBtn=uid=>donInfo(uid)&&uid!==S.user.uid?`<button class="btn" style="background:#ffcc00;color:#000" onclick="A.donate('${esc(uid)}')">💝 Faire un don</button>`:"";
 
+/* ---------- Messagerie (créateur ↔ abonnés) ---------- */
+// Une conversation = doc « convs/{uidA_uidB} » (uids triés) + sous-collection « msgs ».
+// state : "pending" (1er message envoyé, en attente) → "accepted" ou "refused" (bloque l'expéditeur, blockedBy = celui qui a refusé).
+const cidOf=(a,b)=>[a,b].sort().join("_");
+const canMsg=uid=>!!uid&&uid!==S.user.uid&&(S.follows.has(uid)||S.followers.has(uid));
+const msgBtn=uid=>canMsg(uid)?`<button class="btn" onclick="A.chat('${esc(uid)}')">💬 Message</button>`:"";
+
 /* ---------- Écrans ---------- */
 function authHTML(){return `<div class="auth"><div class="logo" style="font-size:42px">PIDE Post</div>
   <p style="color:var(--mu)">Fais des lives, poste leurs meilleurs moments.</p>
@@ -341,7 +353,7 @@ function termsHTML(){return `<div class="auth"><div class="logo" style="font-siz
   <div class="box" style="text-align:left;margin:14px 0;font-size:13px;color:var(--mu);max-height:42vh">
   <p><b>1. Contenu.</b> Tu ne publies que des photos et du texte que tu as le droit de partager. Vidéos et sons sont interdits.</p>
   <p><b>2. Respect.</b> Pas de haine, harcèlement, contenu illégal, spam ou usurpation d'identité. Les contenus abusifs peuvent être supprimés.</p>
-  <p><b>3. Données.</b> Pseudo, photo de profil, publications, likes, abonnements et statistiques de vues sont stockés (Firebase/Google) pour faire fonctionner le service et personnaliser tes recommandations. Pendant un live, des images de ton flux peuvent être analysées par Gemini (Google) pour repérer les temps forts.</p>
+  <p><b>3. Données.</b> Pseudo, photo de profil, publications, likes, abonnements, messages et statistiques de vues sont stockés (Firebase/Google) pour faire fonctionner le service et personnaliser tes recommandations. Pendant un live, des images de ton flux peuvent être analysées par Gemini (Google) pour repérer les temps forts.</p>
   <p><b>4. Publicité.</b> Les publicités « Sponsorisé » sont créées et payées par des membres ; chaque annonceur est responsable de sa pub.</p>
   <p><b>5. Responsabilité.</b> Tu es responsable de ce que tu publies et tu peux supprimer tes posts à tout moment.</p></div>
   <label style="display:flex;gap:8px;text-align:left;align-items:flex-start"><input type="checkbox" id="ok" style="width:auto;margin-top:3px">J'ai lu et j'accepte les conditions légales et la politique de confidentialité.</label>
@@ -350,11 +362,12 @@ function termsHTML(){return `<div class="auth"><div class="logo" style="font-siz
 
 function render(){
   const a=$("app");if(L&&!L.host&&S.view.t!=="live")leaveLive();
+  if(S.chat&&S.view.t!=="chat")A.closeChat();
   if(!S.user)return a.innerHTML=authHTML();
   if(S.boot)return a.innerHTML=`<div class="auth"><div class="logo" style="font-size:30px">Oups</div><p class="err">${esc(S.boot)}</p><button class="pri" onclick="boot(auth.currentUser)">Réessayer</button> <button class="btn" onclick="A.out()">Se déconnecter</button></div>`;
   if(!S.me)return a.innerHTML=termsHTML();
-  const nav=[["home","home","Accueil (lives)"],["foryou","foryou","Live Rest"],["trend","trend","Tendances"],["recent","recent","Récents"],["follow","follow","Abonnements"],["saved","saved","Enregistrés"],["moments","moment","Mes moments"]];
-  const navOn=k=>k==="home"?S.view.t==="feed":k==="moments"?S.view.t==="moments":S.view.t==="swipe"&&S.tab===k;
+  const nav=[["home","home","Accueil (lives)"],["foryou","foryou","Live Rest"],["trend","trend","Tendances"],["recent","recent","Récents"],["follow","follow","Abonnements"],["saved","saved","Enregistrés"],["moments","moment","Mes moments"],["messages","msg","Messages"]];
+  const navOn=k=>k==="home"?S.view.t==="feed":k==="moments"?S.view.t==="moments":k==="messages"?(S.view.t==="inbox"||S.view.t==="chat"):S.view.t==="swipe"&&S.tab===k;
   const fl=[...S.follows].filter(id=>S.users[id]).slice(0,8),un=S.notifs.filter(n=>!n.read).length;applyTheme();
   a.innerHTML=`<div class="top"><span class="logo" onclick="A.home()">PIDE Post</span>
     <div class="search"><input placeholder="Rechercher un post, un #hashtag, un auteur…" value="${esc(S.q)}" onkeydown="if(event.key==='Enter')A.search(this.value)"></div>
@@ -365,7 +378,7 @@ function render(){
     <div class="ni ${S.view.t==="settings"?"on":""}" onclick="A.settings()"><i class="ico i-set"></i>Paramètres</div>
     ${fl.length?`<h4 class="fl">Mes abonnements</h4>`+fl.map(id=>`<div class="ni fl" onclick="A.profile('${id}')">${av(id,24)}<span>${esc(nm(id))}</span></div>`).join(""):""}</nav>
     <main class="ct${S.view.t==="swipe"?" np":""}" id="ct"></main></div><div id="modal"></div>`;
-  ({feed:renderFeed,post:renderPost,profile:renderProfile,settings:renderSettings,notifs:renderNotifs,live:renderLive,swipe:renderSwipe,moments:renderMoments})[S.view.t]()}
+  ({feed:renderFeed,post:renderPost,profile:renderProfile,settings:renderSettings,notifs:renderNotifs,live:renderLive,swipe:renderSwipe,moments:renderMoments,chat:renderChat,inbox:renderInbox})[S.view.t]()}
 
 function cover(p){
   const t=p.title||p.text||"";
@@ -406,7 +419,7 @@ async function renderProfile(){
     <div class="ph"><div style="position:relative">${av(uid,110)}${own?`<label class="cam" title="Changer la photo">📷<input type="file" accept="image/*" hidden onchange="A.avatar(this)"></label>`:""}</div>
     <div style="flex:1;min-width:200px"><h2 style="margin:0">${esc(d.name)}</h2><div class="sub">${folTxt(uid)?folTxt(uid)+" · ":""}${list.length} posts</div>
     ${d.bio?`<div style="margin-top:6px">${esc(d.bio)}</div>`:""}</div>
-    ${own?`<button class="btn" onclick="A.settings()">⚙️ Paramètres</button>`:`<button class="fol ${fl?"on":""}" onclick="A.follow('${uid}')">${fl?"✓ Abonné":"+ S'abonner"}</button>`}</div>${gridHTML(list)}`;
+    ${own?`<button class="btn" onclick="A.settings()">⚙️ Paramètres</button>`:`<button class="fol ${fl?"on":""}" onclick="A.follow('${uid}')">${fl?"✓ Abonné":"+ S'abonner"}</button> ${msgBtn(uid)}`}</div>${gridHTML(list)}`;
   afterGrid()}catch(e){$("ct").innerHTML=`<p class="err">${esc(errMsg(e))}</p>`}}
 
 const pollHTML=p=>{if(!p.poll)return"";const v=S.votes[p.id],tot=p.poll.opts.reduce((a,_,i)=>a+(p.pv?.[i]||0),0),show=v!==undefined||p.authorId===S.user.uid;
@@ -445,10 +458,10 @@ function donSettings(){
 function renderSettings(){
   const s=S.me.settings||{},u=auth.currentUser,uid=S.user.uid,top=Object.entries(S.me.tagWeights||{}).sort((a,b)=>b[1]-a[1]).slice(0,10),h=S.me.bannerHue??hue(uid);
   const sw=(k,l,on)=>`<div class="sr"><span>${l}</span><input type="checkbox" style="width:auto" ${on?"checked":""} onchange="A.pref('${k}',this.checked)"></div>`;
-  const ac=["#00e5ff","#39ff88","#ffa63d","#a56bff","#ff5c8a"];
+  const ac=["#00e5ff","#39ff88","#ffa63d","#a56bff","#ff5c8a"],stt=S.setTab||"gen";
   $("ct").innerHTML=`<div style="max-width:680px"><h2 style="margin-top:0">⚙️ Paramètres</h2>
-  <div class="chips"><button class="chip ${S.setTab!=="mon"?"on":""}" onclick="A.setTab('gen')">⚙️ Général</button><button class="chip ${S.setTab==="mon"?"on":""}" onclick="A.setTab('mon')">💰 Monétisation</button></div>
-  <div id="setgen" style="display:${S.setTab==="mon"?"none":"block"}">
+  <div class="chips"><button class="chip ${stt==="gen"?"on":""}" onclick="A.setTab('gen')">⚙️ Général</button><button class="chip ${stt==="abo"?"on":""}" onclick="A.setTab('abo')">👥 Mes abonnés</button><button class="chip ${stt==="mon"?"on":""}" onclick="A.setTab('mon')">💰 Monétisation</button></div>
+  <div id="setgen" style="display:${stt==="gen"?"block":"none"}">
   <div class="sc"><h3>Profil</h3><div style="display:flex;gap:14px;align-items:center;flex-wrap:wrap">${av(uid,72)}<div><label class="btn" style="display:inline-block">📷 Changer la photo<input type="file" accept="image/*" hidden onchange="A.avatar(this)"></label> <button class="btn" onclick="A.rmAvatar()">Supprimer</button></div></div>
    <input id="sn" maxlength="30" placeholder="Pseudo" value="${esc(S.me.name)}"><textarea id="sb" rows="3" maxlength="200" placeholder="Bio">${esc(S.me.bio||"")}</textarea>
    <div class="sub">Couleur de la bannière</div><input id="bh" type="range" min="0" max="360" value="${h}" oninput="this.nextElementSibling.style.background='hsl('+this.value+' 70% 35%)'"><div class="banner" style="height:40px;background:hsl(${h} 70% 35%)"></div>
@@ -464,10 +477,43 @@ function renderSettings(){
    <div class="sr"><span>Mes données</span><button class="btn" onclick="A.exportData()">Télécharger (JSON)</button></div>
    <div class="sr"><span>Session</span><button class="btn" onclick="A.out()">Se déconnecter</button></div>
    <div class="sr"><span>Supprimer mon compte et mes posts</span><button class="dg" onclick="A.delAccount()">Supprimer</button></div></div></div>
-  <div class="sc" id="monet" style="display:${S.setTab==="mon"?"block":"none"}"><h3>💰 Monétisation</h3><span class="sub">Chargement…</span></div></div>`;A.loadMyAds();A.loadMonet()}
+  <div class="sc" id="monet" style="display:${stt==="mon"?"block":"none"}"><h3>💰 Monétisation</h3><span class="sub">Chargement…</span></div>
+  <div class="sc" id="abo" style="display:${stt==="abo"?"block":"none"}"><h3>👥 Mes abonnés</h3><span class="sub">Chargement…</span></div></div>`;A.loadMyAds();A.loadMonet();A.loadAbo()}
 function renderNotifs(){
-  const T={like:"a aimé ton post",comment:"a commenté ton post",follow:"s'est abonné à toi"};
-  $("ct").innerHTML=`<div style="max-width:680px"><h2 style="margin-top:0">🔔 Notifications</h2>${S.notifs.length?S.notifs.map(n=>`<div class="nt ${n.read?"":"un"}" onclick="${n.type==="payout"?`A.settings()`:n.pid?`A.open('${n.pid}')`:`A.profile('${n.from}')`}">${n.type==="payout"?`<span class="av" style="width:40px;height:40px;background:var(--sf2)">💰</span><div><b>Monétisation</b> ${esc(n.text||"")}`:`${av(n.from,40)}<div><b>${esc(nm(n.from))}</b> ${T[n.type]||""}`}<div class="sub">${ago(n.createdAt)}</div></div></div>`).join(""):`<div class="empty">Aucune notification pour l'instant.</div>`}</div>`}
+  const T={like:"a aimé ton post",comment:"a commenté ton post",follow:"s'est abonné à toi",msg:"t'a envoyé un message"};
+  $("ct").innerHTML=`<div style="max-width:680px"><h2 style="margin-top:0">🔔 Notifications</h2>${S.notifs.length?S.notifs.map(n=>`<div class="nt ${n.read?"":"un"}" onclick="${n.type==="msg"?`A.chat('${n.pid}')`:n.type==="payout"?`A.settings()`:n.pid?`A.open('${n.pid}')`:`A.profile('${n.from}')`}">${n.type==="payout"?`<span class="av" style="width:40px;height:40px;background:var(--sf2)">💰</span><div><b>Monétisation</b> ${esc(n.text||"")}`:`${av(n.from,40)}<div><b>${esc(nm(n.from))}</b> ${T[n.type]||""}`}<div class="sub">${ago(n.createdAt)}</div></div></div>`).join(""):`<div class="empty">Aucune notification pour l'instant.</div>`}</div>`}
+
+/* ---------- Messagerie : liste, conversation ---------- */
+async function renderInbox(){
+  $("ct").innerHTML="<p>Chargement…</p>";
+  try{const q=await getDocs(query(collection(db,"convs"),where("users","array-contains",S.user.uid)));
+    const me=S.user.uid,l=q.docs.map(d=>({id:d.id,...d.data()})).sort((a,b)=>(b.lastAt?.toMillis?.()||0)-(a.lastAt?.toMillis?.()||0));
+    await loadUsers(l.map(c=>c.users.find(x=>x!==me)));
+    if(S.view.t!=="inbox")return;
+    $("ct").innerHTML=`<div style="max-width:680px"><h2 style="margin-top:0">💬 Messages</h2><div class="sub" style="margin-bottom:10px">Tu peux écrire à tes abonnés, et eux peuvent t'écrire. Va dans Paramètres → Mes abonnés pour démarrer une conversation.</div>
+    ${l.length?l.map(c=>{const o=c.users.find(x=>x!==me),req=c.state==="pending"&&c.from!==me;
+      return `<div class="nt ${req?"un":""}" onclick="A.chat('${c.id}')">${av(o,44)}<div style="min-width:0;flex:1"><b>${esc(nm(o))}</b> ${req?`<span class="mc">Demande</span>`:c.state==="refused"?`<span class="mc">🚫 Bloquée</span>`:""}<div class="sub" style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc((c.last||"").slice(0,80))}</div></div><span class="sub">${ago(c.lastAt)}</span></div>`}).join(""):`<div class="empty">Aucune conversation pour l'instant.</div>`}</div>`}
+  catch(e){$("ct").innerHTML=`<p class="err">${esc(errMsg(e))}</p>`}}
+function renderChat(){
+  const c=S.chat;if(!c){S.view={t:"inbox"};return render()}
+  const o=c.other;c.bk="";
+  $("ct").innerHTML=`<div style="max-width:680px"><div class="ab"><span onclick="A.profile('${o}')" style="cursor:pointer">${av(o,44)}</span><b style="cursor:pointer" onclick="A.profile('${o}')">${esc(nm(o))}</b><span class="sp"></span><button class="btn" onclick="A.msgs()">← Messages</button></div>
+  <div class="chat" style="height:70vh"><div class="msgs" id="cmsgs"></div><div id="cbar" style="padding-top:8px"></div></div></div>`;
+  drawChat()}
+function drawChat(){
+  const c=S.chat;if(!c||S.view.t!=="chat")return;const b=$("cmsgs"),bar=$("cbar");if(!b||!bar)return;
+  const me=S.user.uid,o=c.other,cv=c.conv,sent=c.msgs.some(m=>m.uid===me),nmo=esc(nm(o));
+  b.innerHTML=c.msgs.map(m=>`<div class="msg" style="${m.uid===me?"flex-direction:row-reverse":""}">${av(m.uid,28)}<div style="background:${m.uid===me?"var(--c1)":"var(--sf2)"};color:${m.uid===me?"#000":"inherit"};padding:6px 12px;border-radius:12px;max-width:75%">${esc(m.text)}</div></div>`).join("")||`<div class="sub">Aucun message pour l'instant.</div>`;
+  b.scrollTop=b.scrollHeight;
+  let k,h;
+  if(cv?.state==="refused"){
+    if(cv.blockedBy===me){k="b1";h=`<div class="sub">🚫 Tu as refusé cette conversation : ${nmo} ne peut plus t'écrire.</div><button class="btn" style="margin-top:8px" onclick="A.unblock()">Débloquer</button>`}
+    else{k="b2";h=`<div class="sub">🚫 ${nmo} n'accepte pas tes messages.</div>`}}
+  else if(cv?.state==="pending"&&cv.from!==me){k="p1";h=`<div class="sub">${nmo} veut t'écrire. Accepter la conversation ?</div><div style="margin-top:8px"><button class="pri" onclick="A.accConv(true)">✓ Accepter</button> <button class="dg" onclick="A.accConv(false)">✕ Refuser</button></div>`}
+  else if(cv?.state==="pending"&&sent){k="p2";h=`<div class="sub">⏳ En attente : ${nmo} doit accepter la conversation pour que tu puisses continuer.</div>`}
+  else if(!cv&&!canMsg(o)){k="n";h=`<div class="sub">Tu ne peux écrire qu'à tes abonnés et aux créateurs que tu suis.</div>`}
+  else{k="i";h=`<div style="display:flex;gap:8px;align-items:center"><input id="cmi" maxlength="500" style="margin:0" placeholder="Écris un message…" onkeydown="if(event.key==='Enter')A.sendMsg()"><button class="pri" onclick="A.sendMsg()">Envoyer</button></div>`}
+  if(c.bk!==k){c.bk=k;bar.innerHTML=h}}
 
 /* ---------- TEMPS FORTS DU LIVE (Gemini) ----------
    Toutes les 15 s, une image du flux (écran ou caméra) est notée par Gemini de 0 à 10.
@@ -701,10 +747,48 @@ window.boot=boot;window.auth=auth;
 const A=window.A={
   go(t){t&&t!=="foryou"&&t!=="home"?goSwipe(t):A.home()},
   home(){history.replaceState(null,"",location.pathname);S.view={t:"feed"};S.q="";S.tag=null;S.cat="Tout";loadFeed().then(render).catch(render)},
-  nv(k){k==="home"?A.home():k==="moments"?A.moments():goSwipe(k)},
+  nv(k){k==="home"?A.home():k==="moments"?A.moments():k==="messages"?A.msgs():goSwipe(k)},
   cat(c){S.cat=c;renderFeed()},
   swipe(tab){goSwipe(tab)},
   snap(d){const sw=$("sw");if(sw)sw.scrollBy({top:d*sw.clientHeight,behavior:"smooth"})},
+  /* --- Mes abonnés (Paramètres) --- */
+  async loadAbo(){const el=$("abo");if(!el)return;
+    try{const g=await getDocs(query(collection(db,"follows"),where("to","==",S.user.uid)));
+      const l=g.docs.map(d=>d.data()).sort((a,b)=>(b.createdAt?.toMillis?.()||0)-(a.createdAt?.toMillis?.()||0));
+      S.abo=l.map(x=>x.from);S.followers=new Set(S.abo);S.aboAll=false;
+      await loadUsers(S.abo);A.drawAbo()}
+    catch(e){el.innerHTML=`<h3>👥 Mes abonnés</h3><span class="err">${esc(errMsg(e))}</span>`}},
+  drawAbo(){const el=$("abo");if(!el||!S.abo)return;const all=S.aboAll,l=all?S.abo:S.abo.slice(0,5);
+    el.innerHTML=`<h3 style="display:flex;align-items:center;justify-content:space-between;gap:10px">👥 Mes abonnés (${S.abo.length})${S.abo.length>5?`<button class="btn" style="font-size:18px;padding:2px 16px" title="${all?"Revoir seulement les 5 derniers":"Voir tous mes abonnés"}" onclick="A.aboToggle()">${all?"_":"+"}</button>`:""}</h3>
+    <div class="sub" style="margin-bottom:6px">${all?"Tous tes abonnés, du plus récent au plus ancien.":"Tes 5 derniers abonnés."} Clique sur un compte pour le voir.</div>
+    ${l.length?l.map(id=>`<div class="sr"><span style="display:flex;gap:10px;align-items:center;cursor:pointer;min-width:0" onclick="A.profile('${esc(id)}')">${av(id,40)}<b>${esc(nm(id))}</b></span><button class="btn" onclick="A.chat('${esc(id)}')">💬 Message</button></div>`).join(""):`<div class="sub">Personne ne s'est abonné à toi pour l'instant.</div>`}`},
+  aboToggle(){S.aboAll=!S.aboAll;A.drawAbo()},
+  /* --- Messagerie --- */
+  msgs(){S.view={t:"inbox"};render();scrollTo(0,0)},
+  closeChat(){if(S.chat){S.chat.un.forEach(f=>{try{f()}catch(e){}});S.chat=null}},
+  async chat(x){const me=S.user.uid,cid=String(x).includes("_")?x:cidOf(me,x),o=cid.split("_").find(k=>k!==me);if(!o)return;
+    A.closeChat();
+    const c=S.chat={cid,other:o,conv:null,msgs:[],un:[],bk:""};
+    S.view={t:"chat"};render();scrollTo(0,0);
+    if(!S.users[o]){await loadUsers([o]);if(S.chat===c)render()}
+    c.un.push(onSnapshot(doc(db,"convs",cid),sn=>{if(S.chat!==c)return;c.conv=sn.exists()?sn.data():null;drawChat()},e=>{const b=$("cbar");if(b)b.innerHTML=`<div class="err">${esc(errMsg(e))}</div>`}));
+    c.un.push(onSnapshot(query(collection(db,"convs",cid,"msgs"),orderBy("createdAt","asc"),limit(200)),sn=>{if(S.chat!==c)return;c.msgs=sn.docs.map(d=>d.data());drawChat()},e=>console.warn("msgs",e)))},
+  async sendMsg(){const c=S.chat,i=$("cmi");if(!c||!i)return;const t=i.value.trim().slice(0,500);if(!t)return;
+    const me=S.user.uid,o=c.other,cv=c.conv;
+    if(!cv&&!canMsg(o))return toast("Tu ne peux écrire qu'à tes abonnés");
+    if(cv?.state==="refused"||(cv?.state==="pending"&&cv.from!==me))return;
+    if(cv?.state==="pending"&&c.msgs.some(m=>m.uid===me))return toast("En attente de la réponse");
+    i.value="";
+    try{const ref=doc(db,"convs",c.cid);
+      if(!cv)await setDoc(ref,{users:[me,o],from:me,state:"pending",last:t,lastAt:serverTimestamp(),lastBy:me});
+      else await updateDoc(ref,{last:t,lastAt:serverTimestamp(),lastBy:me});
+      await addDoc(collection(db,"convs",c.cid,"msgs"),{uid:me,text:t,createdAt:serverTimestamp()});
+      notify(o,"msg",c.cid)}
+    catch(e){alert(errMsg(e))}},
+  async accConv(ok){const c=S.chat;if(!c||!c.conv)return;
+    try{await updateDoc(doc(db,"convs",c.cid),ok?{state:"accepted"}:{state:"refused",blockedBy:S.user.uid});toast(ok?"Conversation acceptée":"Conversation refusée : cette personne est bloquée")}catch(e){alert(errMsg(e))}},
+  async unblock(){const c=S.chat;if(!c||!c.conv)return;
+    try{await updateDoc(doc(db,"convs",c.cid),{state:"accepted",blockedBy:deleteField()});toast("Personne débloquée")}catch(e){alert(errMsg(e))}},
   /* --- Mes moments / temps forts --- */
   moments(){S.view={t:"moments"};render();scrollTo(0,0)},
   momTog(id,el){if(S.msel.has(id))S.msel.delete(id);else S.msel.add(id);el.classList.toggle("on",S.msel.has(id))},
@@ -851,7 +935,7 @@ const A=window.A={
   async follow(uid){
     const ref=doc(db,"follows",S.user.uid+"_"+uid),u=S.users[uid]||{};
     try{if(S.follows.has(uid)){S.follows.delete(uid);u.followers=Math.max(0,(u.followers||0)-1);render();await deleteDoc(ref);updateDoc(doc(db,"users",uid),{followers:increment(-1)})}
-    else{S.follows.add(uid);u.followers=(u.followers||0)+1;render();await setDoc(ref,{from:S.user.uid,to:uid});updateDoc(doc(db,"users",uid),{followers:increment(1)});notify(uid,"follow")}}catch(e){alert(errMsg(e))}},
+    else{S.follows.add(uid);u.followers=(u.followers||0)+1;render();await setDoc(ref,{from:S.user.uid,to:uid,createdAt:serverTimestamp()});updateDoc(doc(db,"users",uid),{followers:increment(1)});notify(uid,"follow")}}catch(e){alert(errMsg(e))}},
   setTab(t){S.setTab=t;renderSettings()},
   settings(){S.view={t:"settings"};render();scrollTo(0,0)},
   notifs(){S.view={t:"notifs"};render();S.notifs.filter(n=>!n.read).forEach(n=>{n.read=true;updateDoc(doc(db,"notifs",n.id),{read:true}).catch(()=>{})})},
