@@ -1,3 +1,16 @@
+
+
+
+
+
+
+
+
+
+
+
+
+
 <!DOCTYPE html>
 <html lang="fr">
 <head>
@@ -42,6 +55,7 @@ button:disabled{opacity:.5;cursor:default}
 .row{display:flex;gap:12px;margin-top:10px}
 .ti{font-weight:700;font-size:15px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
 .sub{color:var(--mu);font-size:13px}
+.vb{display:inline-flex;align-items:center;gap:3px;background:#1fbf6a22;color:#2ee56f;border:1px solid #1fbf6a66;border-radius:10px;padding:0 7px;font-size:11px;font-weight:700;vertical-align:middle}
 .av{border-radius:50%;object-fit:cover;display:inline-flex;align-items:center;justify-content:center;font-weight:700;flex-shrink:0;color:#fff}
 .empty{text-align:center;color:var(--mu);padding:60px 0;line-height:2.4}
 .wt{display:grid;grid-template-columns:minmax(0,1fr) 380px;gap:26px}
@@ -154,6 +168,7 @@ body.light{--bg:#f3f3fa;--sf:#fff;--sf2:#e4e4f0;--tx:#15151f;--mu:#62627a}
 #inter img{width:100%;max-height:60vh;object-fit:contain;display:block}
 #inter .tc{width:100%;min-height:220px;display:flex}
 </style>
+<base target="_blank">
 </head>
 <body>
 <div id="app"></div>
@@ -180,6 +195,17 @@ const hue=s=>{let h=0;for(const c of String(s))h=(h*31+c.charCodeAt(0))%360;retu
 const nm=(uid,f)=>S.users[uid]?.name||f||"Anonyme";
 const av=(uid,sz=36)=>{const u=S.users[uid]||{},n=u.name||"?";return u.photo?`<img class="av" style="width:${sz}px;height:${sz}px" src="${esc(u.photo)}">`:`<span class="av" style="width:${sz}px;height:${sz}px;font-size:${sz*.45}px;background:hsl(${hue(uid)} 55% 38%)">${esc(n[0]).toUpperCase()}</span>`};
 
+const vb=uid=>S.users[uid]?.verif?`<span class="vb">✔ Validé</span>`:"";
+const normName=n=>String(n||"").trim().toLowerCase();
+// Pseudo unique : réservation dans « usernames/{pseudo en minuscules} » (doc = uid).
+// Règle Firestore conseillée : match /usernames/{n} { allow read: if request.auth != null; allow create, delete: if request.auth != null; }
+async function nameOwner(n){const low=normName(n);if(!low)return"";
+  try{const d=await getDoc(doc(db,"usernames",low));if(d.exists())return d.data().uid||"?"}catch(e){}
+  try{const q=await getDocs(query(collection(db,"users"),where("name","==",String(n).trim()),limit(5)));
+    for(const x of q.docs){if(normName(x.data().name)===low)return x.id}}catch(e){}
+  return ""}
+async function reserveName(n,uid){try{await setDoc(doc(db,"usernames",normName(n)),{uid,createdAt:serverTimestamp()})}catch(e){console.warn("usernames",e)}}
+async function freeName(n,uid){try{const r=doc(db,"usernames",normName(n)),d=await getDoc(r);if(d.exists()&&d.data().uid===uid)await deleteDoc(r)}catch(e){}}
 function shrink(file,max,q){return new Promise((ok,ko)=>{
   if(!file.type.startsWith("image/"))return ko(new Error("Seules les photos sont autorisées (pas de vidéo ni de son)."));
   const im=new Image,u=URL.createObjectURL(file);
@@ -295,7 +321,7 @@ function slideHTML(p){
   const imgs=(p.imgs||[]).length?p.imgs:(p.thumb?[p.thumb]:[]),bg=p.thumb||imgs[0]||"",only=!imgs.length,sv=(S.me.saved||[]).includes(p.id);
   return `<section class="sl" data-id="${esc(p.id)}">${bg?`<img class="sbgi" src="${esc(bg)}">`:`<div class="sbgc" style="background:linear-gradient(135deg,hsl(${hue(p.id)} 65% 32%),hsl(${hue(p.id)+50} 65% 22%))"></div>`}
   <div class="sin"><div class="smd">${imgs.length?`<div class="sim">${imgs.map(x=>`<img loading="lazy" src="${esc(x)}">`).join("")}</div>${imgs.length>1?`<span class="bd">▣ ${imgs.length}</span>`:""}`:`<div class="tc" style="background:linear-gradient(135deg,hsl(${hue(p.id)} 65% 32%),hsl(${hue(p.id)+50} 65% 22%))">${esc((p.title||p.text||"").slice(0,220))}</div>`}</div>
-   <div class="sif"><div style="display:flex;align-items:center;gap:8px;cursor:pointer" onclick="A.profile('${esc(p.authorId)}')">${av(p.authorId,36)}<b>${esc(nm(p.authorId,p.authorName))}</b></div>
+   <div class="sif"><div style="display:flex;align-items:center;gap:8px;cursor:pointer" onclick="A.profile('${esc(p.authorId)}')">${av(p.authorId,36)}<b>${esc(nm(p.authorId,p.authorName))}</b> ${vb(p.authorId)}</div>
     ${only?"":`${p.title?`<div class="ti">${esc(p.title)}</div>`:""}${p.text?`<div class="sx">${esc(p.text.slice(0,160))}</div>`:""}`}</div>
    <div class="sact"><button class="sb lk ${S.likes.has(p.id)?"on":""}" data-id="${esc(p.id)}" onclick="A.like('${esc(p.id)}')"><span>♥</span><small>${fmt(p.likes)}</small></button>
     <button class="sb" onclick="A.openPost('${esc(p.id)}')"><span>💬</span><small>${fmt(p.comments)}</small></button>
@@ -357,6 +383,8 @@ function termsHTML(){return `<div class="auth"><div class="logo" style="font-siz
   <p><b>4. Publicité.</b> Les publicités « Sponsorisé » sont créées et payées par des membres ; chaque annonceur est responsable de sa pub.</p>
   <p><b>5. Responsabilité.</b> Tu es responsable de ce que tu publies et tu peux supprimer tes posts à tout moment.</p></div>
   <label style="display:flex;gap:8px;text-align:left;align-items:flex-start"><input type="checkbox" id="ok" style="width:auto;margin-top:3px">J'ai lu et j'accepte les conditions légales et la politique de confidentialité.</label>
+  <input id="un" maxlength="30" placeholder="Pseudo (unique dans l'app)" value="${esc(auth.currentUser?.displayName||(auth.currentUser?.email||"membre").split("@")[0])}">
+  <div class="sub">Ce pseudo est unique : personne d'autre ne peut le porter.</div>
   <div class="err" id="err">${esc(S.err||"")}</div>
   <button class="pri" onclick="A.accept()">Accepter et continuer</button> <button class="btn" onclick="A.out()">Refuser</button></div>`}
 
@@ -387,7 +415,7 @@ function cardHTML(p){
   const n=(p.imgs||[]).length;
   return `<div class="vc" data-id="${p.id}" onclick="A.open('${p.id}')"><div class="th">${cover(p)}${n>1?`<span class="bd">▣ ${n}</span>`:""}${p.poll?`<span class="bd l">📊 Sondage</span>`:""}</div>
     <div class="row"><span onclick="event.stopPropagation();A.profile('${p.authorId}')">${av(p.authorId)}</span>
-    <div><div class="ti">${esc(p.title||p.text||"Photo")}</div><div class="sub">${esc(nm(p.authorId,p.authorName))}</div>
+    <div><div class="ti">${esc(p.title||p.text||"Photo")}</div><div class="sub">${esc(nm(p.authorId,p.authorName))} ${vb(p.authorId)}</div>
     <div class="sub">${fmt(p.views)} vues · ${ago(p.createdAt)} · ♥ ${fmt(p.likes)}</div></div></div></div>`}
 /* Miniature du live : l'image choisie par le créateur, sinon le dégradé « EN DIRECT » */
 const liveCover=l=>safeImg(l.thumb)?`<img loading="lazy" src="${l.thumb}">`:`<div class="tc" style="background:linear-gradient(135deg,#ff2b5c,#7a1fff);color:#fff">🔴 EN DIRECT<br>${esc((l.title||"").slice(0,60))}</div>`;
@@ -417,7 +445,7 @@ async function renderProfile(){
   const own=uid===S.user.uid,fl=S.follows.has(uid),h=d.bannerHue??hue(uid);
   $("ct").innerHTML=`<div class="banner" style="background:linear-gradient(120deg,hsl(${h} 70% 35%),hsl(${h+70} 70% 28%))"></div>
     <div class="ph"><div style="position:relative">${av(uid,110)}${own?`<label class="cam" title="Changer la photo">📷<input type="file" accept="image/*" hidden onchange="A.avatar(this)"></label>`:""}</div>
-    <div style="flex:1;min-width:200px"><h2 style="margin:0">${esc(d.name)}</h2><div class="sub">${folTxt(uid)?folTxt(uid)+" · ":""}${list.length} posts</div>
+    <div style="flex:1;min-width:200px"><h2 style="margin:0">${esc(d.name)} ${vb(uid)}</h2><div class="sub">${folTxt(uid)?folTxt(uid)+" · ":""}${list.length} posts</div>
     ${d.bio?`<div style="margin-top:6px">${esc(d.bio)}</div>`:""}</div>
     ${own?`<button class="btn" onclick="A.settings()">⚙️ Paramètres</button>`:`<button class="fol ${fl?"on":""}" onclick="A.follow('${uid}')">${fl?"✓ Abonné":"+ S'abonner"}</button> ${msgBtn(uid)}`}</div>${gridHTML(list)}`;
   afterGrid()}catch(e){$("ct").innerHTML=`<p class="err">${esc(errMsg(e))}</p>`}}
@@ -439,7 +467,7 @@ function renderPost(){
     ${imgs.length?`<div class="gal"><img src="${imgs[gi]}">${imgs.length>1?`<button class="ar l" onclick="A.gal(-1)">‹</button><button class="ar r" onclick="A.gal(1)">›</button><span class="bd">${gi+1} / ${imgs.length}</span>`:""}</div>`:""}
     ${p.title?`<h1 class="h1">${esc(p.title)}</h1>`:""}
     <div class="ab"><span onclick="A.profile('${p.authorId}')" style="cursor:pointer">${av(p.authorId,44)}</span>
-      <div><b style="cursor:pointer" onclick="A.profile('${p.authorId}')">${esc(nm(p.authorId,p.authorName))}</b><div class="sub">${folTxt(p.authorId)}</div></div>
+      <div><b style="cursor:pointer" onclick="A.profile('${p.authorId}')">${esc(nm(p.authorId,p.authorName))}</b> ${vb(p.authorId)}<div class="sub">${folTxt(p.authorId)}</div></div>
       ${own?`<button class="btn" onclick="A.edit('${p.id}')">✏️ Modifier</button> <button class="btn" onclick="A.del('${p.id}')">🗑</button>`:`<button class="fol ${fl?"on":""}" onclick="A.follow('${p.authorId}')">${fl?"✓ Abonné":"+ S'abonner"}</button>`}
       ${donBtn(p.authorId)}<span class="sp"></span><div class="pill"><button class="${S.likes.has(p.id)?"on":""}" onclick="A.like('${p.id}')">♥ ${fmt(p.likes)}</button><button onclick="A.share('${p.id}')">↗ Partager</button><button class="${sv?"on":""}" title="Enregistrer" onclick="A.save('${p.id}')">🔖</button>${own?"":`<button title="Signaler" onclick="A.report('${p.id}')">⚑</button>`}</div></div>
     <div class="desc"><b>${fmt(p.views)} vues · ${d}</b>
@@ -895,8 +923,12 @@ const A=window.A={
     showErr("");try{await signInWithEmailAndPassword(auth,em,$("pw").value)}catch(e){showErr(errMsg(e))}},
   async accept(){
     if(!$("ok").checked)return showErr("Tu dois accepter les conditions.");
-    try{const u=auth.currentUser,me={name:u.displayName||(u.email||"membre").split("@")[0],photo:u.photoURL||"",bio:"",followers:0,tagWeights:{},terms:true,termsAt:serverTimestamp()};
-      await setDoc(doc(db,"users",u.uid),me);S.me=me;await loadSocial();await loadFeed();render()}
+    const n=($("un")?.value||"").trim();
+    if(n.length<2)return showErr("Choisis un pseudo (2 caractères min.).");
+    try{const u=auth.currentUser;
+      const owner=await nameOwner(n);if(owner&&owner!==u.uid)return showErr("Ce pseudo est déjà pris : choisis-en un autre.");
+      const me={name:n,photo:u.photoURL||"",bio:"",followers:0,tagWeights:{},terms:true,termsAt:serverTimestamp()};
+      await setDoc(doc(db,"users",u.uid),me);await reserveName(n,u.uid);S.me=me;await loadSocial();await loadFeed();render()}
     catch(e){console.error(e);showErr(errMsg(e))}},
   profile(uid){S.view={t:"profile",uid};render();scrollTo(0,0)},
   async avatar(inp){const f=inp.files[0];if(!f)return;
@@ -947,8 +979,11 @@ const A=window.A={
   async edit(id){const p=S.posts.find(x=>x.id===id),t=prompt("Titre :",p.title||"");if(t===null)return;const x=prompt("Texte :",p.text||"");if(x===null)return;
     const tags=[...new Set([...(t+" "+x).matchAll(TAG)].map(m=>m[1].toLowerCase()))].slice(0,10);
     try{await updateDoc(doc(db,"posts",id),{title:t.trim(),text:x.trim(),tags});Object.assign(p,{title:t.trim(),text:x.trim(),tags});renderPost()}catch(e){alert(errMsg(e))}},
-  async saveProfile(){const u={name:$("sn").value.trim()||S.me.name,bio:$("sb").value.trim().slice(0,200),bannerHue:+$("bh").value};
-    try{await updateDoc(doc(db,"users",S.user.uid),u);Object.assign(S.me,u);toast("Profil enregistré");render()}catch(e){alert(errMsg(e))}},
+  async saveProfile(){const n=$("sn").value.trim()||S.me.name,u={name:n,bio:$("sb").value.trim().slice(0,200),bannerHue:+$("bh").value};
+    try{if(normName(n)!==normName(S.me.name||"")){
+      const owner=await nameOwner(n);if(owner&&owner!==S.user.uid)return toast("Ce pseudo est déjà pris : choisis-en un autre.");
+      await reserveName(n,S.user.uid);await freeName(S.me.name,S.user.uid)}
+      await updateDoc(doc(db,"users",S.user.uid),u);Object.assign(S.me,u);toast("Profil enregistré");render()}catch(e){alert(errMsg(e))}},
   async rmAvatar(){try{await updateDoc(doc(db,"users",S.user.uid),{photo:""});S.me.photo="";render()}catch(e){alert(errMsg(e))}},
   pref(k,v){S.me.settings={...(S.me.settings||{}),[k]:v};updateDoc(doc(db,"users",S.user.uid),{["settings."+k]:v}).catch(e=>alert(errMsg(e)));applyTheme();if(k==="theme"||k==="accent")render()},
   async resetReco(){if(!confirm("Réinitialiser tes recommandations ?"))return;
