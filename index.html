@@ -219,9 +219,9 @@ const errMsg=e=>{const c=e?.code||"";return c in MSG?MSG[c]:(e?.message||"Erreur
 const showErr=m=>{S.err=m;const el=$("err");if(el)el.textContent=m};
 async function boot(u){
   window.A?.closeChat?.();
-  S.user=u;S.me=null;S.boot=null;S.err="";S.moments=undefined;S.pm=null;S.followers=new Set();S.abo=null;S.aboAll=false;
+  if(!u)GEMINI_KEY="";S.user=u;S.me=null;S.boot=null;S.err="";S.moments=undefined;S.pm=null;S.followers=new Set();S.abo=null;S.aboAll=false;
   if(u){try{const d=await getDoc(doc(db,"users",u.uid));
-      if(d.exists()){S.me=d.data();await loadSocial();await loadFeed();await loadNotifs();watchLives()}}
+      if(d.exists()){S.me=d.data();await loadSocial();await loadFeed();await loadNotifs();watchLives();loadGeminiKey()}}
     catch(e){console.error(e);S.boot=errMsg(e)}}
   render();const h=location.hash.slice(1);if(S.me&&h&&!S.hash&&S.posts.find(x=>x.id===h)){S.hash=1;A.open(h)}}
 onAuthStateChanged(auth,u=>{if(!S.busy)boot(u)});
@@ -547,12 +547,17 @@ function drawChat(){
    Toutes les 15 s, une image du flux (écran ou caméra) est notée par Gemini de 0 à 10.
    Les réactions et messages du chat ajoutent un bonus. À la fin du live, les meilleurs moments
    sont sauvegardés dans « Mes moments » (collection Firestore « moments ») et proposés à la publication. */
-const GEMINI_KEY="AQ.Ab8RN6LztsxjzeRMryOWoM7QhyxSswQcBmNTBC2KHX0G1y5tXQ"; // visible par tous les visiteurs : restreins-la à ton domaine dans Google AI Studio / Cloud Console
+let GEMINI_KEY="";
+async function loadGeminiKey(){if(GEMINI_KEY)return GEMINI_KEY;
+  try{const d=await getDoc(doc(db,"config","gemini"));GEMINI_KEY=d.exists()?String(d.data().key||""):""}
+  catch(e){console.warn("gemini key",e)}
+  return GEMINI_KEY}
 const GEMINI_URL="https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent";
 const HL_EVERY=15000,HL_KEEP=30,HL_FINAL=12,HL_MIN=4,HL_GAP=30000,HL_MAXPOST=8;
 const si=s=>safeImg(s)?s:"";
 async function geminiScore(b64){
-  const r=await fetch(GEMINI_URL,{method:"POST",headers:{"Content-Type":"application/json","x-goog-api-key":GEMINI_KEY},body:JSON.stringify({
+  const k=await loadGeminiKey();if(!k)throw new Error("clé Gemini indisponible");
+  const r=await fetch(GEMINI_URL,{method:"POST",headers:{"Content-Type":"application/json","x-goog-api-key":k},body:JSON.stringify({
     contents:[{parts:[{text:"Tu choisis les temps forts d'un live. Note cette image de 0 à 10 : 10 = moment fort, spectaculaire, drôle, émotionnel ou très intéressant, image nette ; 5 = correct ; 0 = noir, flou, vide ou sans intérêt. Réponds uniquement en JSON : {\"score\":nombre}"},{inline_data:{mime_type:"image/jpeg",data:b64}}]}],
     generationConfig:{temperature:.2,responseMimeType:"application/json",thinkingConfig:{thinkingBudget:0}}})});
   if(!r.ok)throw new Error("Gemini "+r.status);
